@@ -6,6 +6,10 @@
 let blockedCount = 0;
 let blockingEnabled = true;
 
+// INVARIANT: every mutation to blockedCount/blockingEnabled must be
+// immediately followed by chrome.storage.local.set, because the SW
+// can be killed at any time and in-memory state will not survive.
+
 // Restore persisted state on startup
 chrome.storage.local.get(['blockingEnabled', 'blockedCount'], (result) => {
   blockingEnabled = result.blockingEnabled !== false; // default true
@@ -16,12 +20,16 @@ chrome.storage.local.get(['blockingEnabled', 'blockedCount'], (result) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.type === 'TRACKER_BLOCKED') {
+    if (!blockingEnabled) {
+      sendResponse({ success: false, reason: 'blocking disabled' });
+      return true;
+    }
     blockedCount++;
     chrome.storage.local.set({ blockedCount });
     updateBadge();
     // Tell content script on same tab to show the toast
     if (sender.tab && sender.tab.id) {
-      chrome.tabs.sendMessage(sender.tab.id, { type: 'SHOW_TOAST' });
+      chrome.tabs.sendMessage(sender.tab.id, { type: 'SHOW_TOAST' }).catch(() => {});
     }
     sendResponse({ success: true });
   }
