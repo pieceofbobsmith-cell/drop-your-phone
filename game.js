@@ -213,7 +213,7 @@ function update(dt) {
   if (gameState === State.PLAYING) {
     updatePlayer(dt);
     updateSignal(dt);
-    checkObstacles();
+    checkObstacles(dt);
     checkEndReached();
   } else if (gameState === State.DROP_MOMENT) {
     // Player can still move slowly during drop moment
@@ -274,7 +274,7 @@ function updateSignal(dt) {
   }
 }
 
-function checkObstacles() {
+function checkObstacles(dt) {
   for (const obs of obstacles) {
     if (obs.passed) continue;
     const screenX = obs.worldX - scrollX;
@@ -303,8 +303,8 @@ function checkObstacles() {
             missedItems.push(obs.type === 'door' ? 'locked door — no digital key' : 'bus stop — no digital ticket');
           }
           // After 4 seconds of being blocked, obstacle gives way (player finds another route)
-          obs.bypassTimer = (obs.bypassTimer || 0) + 1;
-          if (obs.bypassTimer > 240) { // ~4s at 60fps
+          obs.bypassTimer = (obs.bypassTimer || 0) + dt;
+          if (obs.bypassTimer > 4000) { // 4 seconds in ms
             obs.passed = true;
           }
         }
