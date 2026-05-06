@@ -162,8 +162,8 @@ function handleSpacebar() {
   if (gameState !== State.PLAYING) return;
   if (hasPhone) {
     dropPhone();
-  } else if (phoneOnGround) {
-    // Pick up burner if player is close enough
+  } else if (phoneOnGround && phoneOnGround.isBurner) {
+    // Pick up burner if player is close enough (original dropped phone is not pickable)
     const screenX = phoneOnGround.worldX - scrollX;
     if (Math.abs(screenX - player.x) < 50) {
       pickUpBurner();
