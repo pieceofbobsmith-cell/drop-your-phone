@@ -713,7 +713,7 @@ function playerTakeDamage() {
   if (player.invincible > 0) return;
   player.health -= 1;
   player.invincible = 2.0;
-  if (player.health <= 0) enterDead();
+  if (player.health <= 0) enterEnding('caught');
 }
 
 // ============================================================
@@ -856,7 +856,7 @@ function checkPickups() {
         player.hasPhone = true;
         player.phoneDropped = false;
         player.phoneIsBurner = true;
-        player.tracking = Math.min(player.tracking, 0.5);
+        player.tracking = 0.5;
         burnerOnGround = null;
       } else {
         const maxes = { burner: 1, jammer: 3, fakeId: 2, distraction: 5 };
@@ -876,7 +876,7 @@ function useItem(slotIndex) {
     player.hasPhone = true;
     player.phoneDropped = false;
     player.phoneIsBurner = true;
-    player.tracking = Math.min(player.tracking, 0.5);
+    player.tracking = 0.5;
     inventory.burner = 0;
   } else if (key === 'jammer') {
     jammerActive = 8.0;
