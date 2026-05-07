@@ -125,6 +125,7 @@ function mapAt(x, y) {
 // ============================================================
 const TEX_SIZE = 64;
 const textures = {};
+const texData = {}; // { brick: Uint8ClampedArray, concrete: ..., tile: ... }
 
 function buildTextures() {
   function makeTexture(drawFn) {
@@ -180,6 +181,11 @@ function buildTextures() {
       c.fillRect(Math.random() * TEX_SIZE, Math.random() * TEX_SIZE, 4 + Math.random() * 10, 3 + Math.random() * 8);
     }
   });
+
+  // Pre-cache pixel data for fast column sampling
+  for (const key of ['brick', 'concrete', 'tile']) {
+    texData[key] = textures[key].getContext('2d').getImageData(0, 0, TEX_SIZE, TEX_SIZE).data;
+  }
 }
 
 // ============================================================
@@ -187,6 +193,7 @@ function buildTextures() {
 // ============================================================
 const zBuffer = new Float32Array(800);
 let currentWallTex = null;
+let currentWallTexKey = 'brick';
 let currentCeilColor = '#1a1a2e';
 let currentFloorColor = '#111118';
 let currentTrackingMultiplier = 1.0;
@@ -241,7 +248,7 @@ function castRays() {
       wallX -= Math.floor(wallX);
       const tx = Math.min(Math.floor(wallX * TEX_SIZE), TEX_SIZE - 1);
       const sideDim = side === 1 ? 0.7 : 1.0;
-      drawTexturedStrip(currentWallTex, tx, wallH, wallTop, col, depth * sideDim);
+      drawTexturedStrip(currentWallTexKey, tx, wallH, wallTop, col, depth * sideDim);
     } else {
       const brightness = Math.max(0, 1 - depth / MAX_DEPTH);
       const shade = side === 1 ? brightness * 0.6 : brightness;
@@ -256,13 +263,14 @@ function castRays() {
   }
 }
 
-function drawTexturedStrip(tex, tx, wallH, wallTop, col, depth) {
+function drawTexturedStrip(texKey, tx, wallH, wallTop, col, depth) {
   const brightness = Math.max(0.15, 1 - depth / MAX_DEPTH);
-  const srcData = tex.getContext('2d').getImageData(tx, 0, 1, TEX_SIZE).data;
+  const srcData = texData[texKey];
   const imgData = ctx.createImageData(1, wallH);
   for (let y = 0; y < wallH; y++) {
     const ty = Math.floor((y / wallH) * TEX_SIZE);
-    const s = ty * 4, d = y * 4;
+    const s = (ty * TEX_SIZE + tx) * 4;
+    const d = y * 4;
     imgData.data[d]   = Math.min(255, srcData[s]   * brightness);
     imgData.data[d+1] = Math.min(255, srcData[s+1] * brightness);
     imgData.data[d+2] = Math.min(255, srcData[s+2] * brightness);
@@ -1015,7 +1023,7 @@ const LEVELS = [
       { x: 5.0, y: 4.0, angle: 0, route: [{x:5,y:4},{x:5,y:10},{x:12,y:10},{x:12,y:4}] },
       { x: 12.0, y: 7.0, angle: Math.PI, route: [{x:12,y:7},{x:8,y:7},{x:8,y:11},{x:12,y:11}] },
       { x: 8.0, y: 5.0, angle: 0, route: [], opts: { chaseOnSight: true } },
-      { x: 14.5, y: 12.5, angle: Math.PI, route: [] },
+      { x: 13.5, y: 12.5, angle: Math.PI, route: [] },
     ],
     items: [
       { x: 3.5, y: 11.5, key: 'jammer' },
@@ -1041,6 +1049,7 @@ function loadLevel(index) {
   MAP_H = lvl.mapH;
 
   currentWallTex = textures[lvl.wallTex];
+  currentWallTexKey = lvl.wallTex;
   currentCeilColor = lvl.ceilColor;
   currentFloorColor = lvl.floorColor;
 
