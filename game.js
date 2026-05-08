@@ -241,7 +241,6 @@ function buildAgentMaterials() {
   agentMats.vest   = new THREE.MeshStandardMaterial({ color: 0x1c2340, roughness: 0.8, metalness: 0.1 });
   agentMats.helmet = new THREE.MeshStandardMaterial({ color: 0x1a2030, roughness: 0.7, metalness: 0.15 });
   agentMats.visor  = new THREE.MeshStandardMaterial({ color: 0x050a14, roughness: 0.05, metalness: 0.95 });
-  agentMats.skin   = new THREE.MeshStandardMaterial({ color: 0xc49060, roughness: 0.8, metalness: 0.0 });
   agentMats.pants  = new THREE.MeshStandardMaterial({ color: 0x141a28, roughness: 0.85, metalness: 0.0 });
   agentMats.boots  = new THREE.MeshStandardMaterial({ color: 0x080808, roughness: 0.9, metalness: 0.05 });
   agentMats.badge  = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.3, metalness: 0.8, emissive: 0xffd700, emissiveIntensity: 0.25 });
@@ -669,7 +668,10 @@ function update(dt) {
   }
 
   if (STATE === 'PLAYING') updatePlaying(dt);
-  else if (STATE === 'DROP_MOMENT') { dropMomentTimer += dt; }
+  else if (STATE === 'DROP_MOMENT') {
+    dropMomentTimer += dt;
+    if (dropMomentTimer > 10.0) resumeFromLoss(); // safety timeout
+  }
   else if (STATE === 'LEVEL_TRANSITION') updateLevelTransition(dt);
   else if (STATE === 'ENDING') updateEnding(dt);
 }
