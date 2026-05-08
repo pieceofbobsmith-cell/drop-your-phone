@@ -1,105 +1,78 @@
-// Drop Your Phone — FPS Edition
-// ============================================================
-// Constants
-// ============================================================
-const CANVAS_W = 800, CANVAS_H = 400;
-const HALF_H = CANVAS_H / 2;
-const FOV = Math.PI / 3;
-const NUM_RAYS = CANVAS_W;
-const HALF_FOV = FOV / 2;
-const RAY_STEP = FOV / NUM_RAYS;
-const MAX_DEPTH = 16;
-const CELL_SIZE = 1;
+'use strict';
 
-// ============================================================
-// Game state
-// ============================================================
+// ═══════════════════════════════════════════════════════
+// Constants
+// ═══════════════════════════════════════════════════════
+const PLAYER_HEIGHT   = 1.65;
+const PLAYER_RADIUS   = 0.3;
+const CELL_SIZE       = 2;
+const WALL_HEIGHT     = 3.2;
+const MOVE_SPEED      = 5.0;
+const SPRINT_MULT     = 2.0;
+const TURN_SPEED      = 0.002;
+const STAMINA_DRAIN   = 0.4;
+const STAMINA_REGEN   = 0.25;
+const TRACKING_BASE   = 0.012;
+const TRACKING_LOS    = 0.045;
+const TRACKING_BURNER = 0.006;
+const TRACKING_DRAIN  = 0.008;
+const AGENT_PATROL_SPEED = 2.0;
+const AGENT_CHASE_SPEED  = 4.5;
+const AGENT_ALERT_SPEED  = 3.0;
+const AGENT_CONTACT_DIST = 1.2;
+const AGENT_SIGHT_RANGE  = 14;
+const AGENT_FOV          = Math.PI / 2;
+
+// ═══════════════════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════════════════
 let STATE = 'TITLE';
 
-// ============================================================
-// Canvas setup
-// ============================================================
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-canvas.width = CANVAS_W;
-canvas.height = CANVAS_H;
+// ═══════════════════════════════════════════════════════
+// Three.js core
+// ═══════════════════════════════════════════════════════
+const scene    = new THREE.Scene();
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled  = true;
+renderer.shadowMap.type     = THREE.PCFSoftShadowMap;
+renderer.toneMapping        = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.85;
+document.getElementById('renderer-container').appendChild(renderer.domElement);
 
-// ============================================================
-// Input
-// ============================================================
-const keys = {};
-document.addEventListener('keydown', e => {
-  keys[e.code] = true;
-  if (e.code === 'Space' && STATE === 'PLAYING') handleSpacebar();
-  if ((e.code === 'Space' || e.code === 'Enter') && (STATE === 'ENDING' || STATE === 'DEAD') && endingTimer > 5.0) resetGame();
-  if ((e.code === 'Space' || e.code === 'Enter') && STATE === 'TITLE') { loadLevel(0); STATE = 'PLAYING'; }
-  if (e.code === 'Digit1' && STATE === 'PLAYING') useItem(0);
-  if (e.code === 'Digit2' && STATE === 'PLAYING') useItem(1);
-  if (e.code === 'Digit3' && STATE === 'PLAYING') useItem(2);
-  if (e.code === 'Digit4' && STATE === 'PLAYING') useItem(3);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.05, 80);
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
 });
-document.addEventListener('keyup', e => { keys[e.code] = false; });
 
-// ============================================================
-// Timing
-// ============================================================
-let lastTime = 0;
-function gameLoop(ts) {
-  const dt = Math.min((ts - lastTime) / 1000, 0.05);
-  lastTime = ts;
-  update(dt);
-  render();
-  requestAnimationFrame(gameLoop);
-}
+// Camera pivot
+const cameraPivot = new THREE.Group();
+scene.add(cameraPivot);
+cameraPivot.add(camera);
 
-function update(dt) {
-  if (STATE === 'PLAYING') updatePlaying(dt);
-  else if (STATE === 'DROP_MOMENT') updateDropMoment(dt);
-  else if (STATE === 'LOSS_SCREEN') updateLossScreen(dt);
-  else if (STATE === 'LEVEL_TRANSITION') updateLevelTransition(dt);
-  else if (STATE === 'DEAD') updateDead(dt);
-  else if (STATE === 'TITLE') { /* input handled in keydown */ }
-  else if (STATE === 'ENDING') endingTimer += dt;
-}
+// Flashlight
+const flashlight = new THREE.SpotLight(0xffffff, 3.5, 18, 0.38, 0.35, 1.2);
+flashlight.castShadow = true;
+flashlight.shadow.mapSize.set(1024, 1024);
+flashlight.shadow.camera.near = 0.1;
+flashlight.shadow.camera.far  = 18;
+const flashTarget = new THREE.Object3D();
+camera.add(flashlight);
+camera.add(flashTarget);
+flashTarget.position.set(0, 0, -1);
+flashlight.target = flashTarget;
 
-function render() {
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-  if (STATE === 'PLAYING') {
-    castRays();
-    drawSprites();
-    drawHUD();
-    if (player.invincible > 0 && Math.floor(player.invincible * 6) % 2 === 0) {
-      ctx.fillStyle = 'rgba(255,100,100,0.25)';
-      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-    }
-  } else if (STATE === 'DROP_MOMENT') {
-    castRays();
-    drawSprites();
-    drawHUD();
-    ctx.fillStyle = 'rgba(0,0,50,0.4)';
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-  } else if (STATE === 'LOSS_SCREEN') {
-    renderLossScreen();
-  } else if (STATE === 'LEVEL_TRANSITION') {
-    renderLevelTransition();
-  } else if (STATE === 'TITLE') {
-    renderTitle();
-  } else if (STATE === 'ENDING') {
-    renderEnding();
-  } else if (STATE === 'DEAD') {
-    renderDead();
-  }
-}
-
-// ============================================================
+// ═══════════════════════════════════════════════════════
 // Player
-// ============================================================
+// ═══════════════════════════════════════════════════════
 const player = {
-  x: 2.5, y: 2.5,
-  angle: 0,
-  health: 3,
-  maxHealth: 3,
+  x: CELL_SIZE * 1.5, z: CELL_SIZE * 1.5,
+  angleY: 0, angleX: 0,
+  health: 3, maxHealth: 3,
   stamina: 1.0,
   invincible: 0,
   hasPhone: true,
@@ -108,826 +81,301 @@ const player = {
   tracking: 0,
 };
 
-// ============================================================
-// Map helpers
-// ============================================================
-let MAP = [];
-let MAP_W = 0, MAP_H = 0;
+// ═══════════════════════════════════════════════════════
+// Input
+// ═══════════════════════════════════════════════════════
+const keys = {};
+let pointerLocked = false;
+let mouseDX = 0, mouseDY = 0;
 
-function mapAt(x, y) {
-  const gx = Math.floor(x), gy = Math.floor(y);
-  if (gx < 0 || gx >= MAP_W || gy < 0 || gy >= MAP_H) return 1;
-  return MAP[gy * MAP_W + gx];
+document.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'Space' && STATE === 'PLAYING') handlePhoneDrop();
+  if (e.code === 'Digit1' && STATE === 'PLAYING') useItem(0);
+  if (e.code === 'Digit2' && STATE === 'PLAYING') useItem(1);
+  if (e.code === 'Digit3' && STATE === 'PLAYING') useItem(2);
+  if (e.code === 'Digit4' && STATE === 'PLAYING') useItem(3);
+  if ((e.code === 'Space' || e.code === 'Enter') && STATE === 'LOSS_SCREEN') resumeFromLoss();
+  if ((e.code === 'Space' || e.code === 'Enter') && STATE === 'ENDING' && endingReturnEnabled) resetGame();
+});
+document.addEventListener('keyup', e => { keys[e.code] = false; });
+document.addEventListener('mousemove', e => {
+  if (!pointerLocked) return;
+  mouseDX += e.movementX;
+  mouseDY += e.movementY;
+});
+document.addEventListener('pointerlockchange', () => {
+  pointerLocked = document.pointerLockElement === renderer.domElement;
+});
+renderer.domElement.addEventListener('click', () => {
+  if (STATE === 'TITLE') { startGame(); return; }
+  if (STATE === 'LOSS_SCREEN') { resumeFromLoss(); return; }
+  if (STATE === 'ENDING' && endingReturnEnabled) { resetGame(); return; }
+  if (STATE === 'PLAYING' || STATE === 'DROP_MOMENT') {
+    renderer.domElement.requestPointerLock();
+  }
+});
+
+// ═══════════════════════════════════════════════════════
+// Map helpers
+// ═══════════════════════════════════════════════════════
+let MAP = [], MAP_W = 0, MAP_H = 0;
+
+function mapAt(gx, gz) {
+  const ix = Math.floor(gx), iz = Math.floor(gz);
+  if (ix < 0 || ix >= MAP_W || iz < 0 || iz >= MAP_H) return 1;
+  return MAP[iz * MAP_W + ix];
+}
+function worldToGrid(wx, wz) {
+  return { gx: wx / CELL_SIZE, gz: wz / CELL_SIZE };
+}
+function canMove(wx, wz) {
+  const r = PLAYER_RADIUS / CELL_SIZE;
+  const { gx, gz } = worldToGrid(wx, wz);
+  return mapAt(gx - r, gz - r) === 0 && mapAt(gx + r, gz - r) === 0 &&
+         mapAt(gx - r, gz + r) === 0 && mapAt(gx + r, gz + r) === 0;
 }
 
-// ============================================================
+// ═══════════════════════════════════════════════════════
 // Textures
-// ============================================================
-const TEX_SIZE = 64;
+// ═══════════════════════════════════════════════════════
 const textures = {};
-const texData = {}; // { brick: Uint8ClampedArray, concrete: ..., tile: ... }
+
+function makeCanvasTex(size, drawFn, rx, ry) {
+  const oc = document.createElement('canvas');
+  oc.width = size; oc.height = size;
+  drawFn(oc.getContext('2d'), size);
+  const tex = new THREE.CanvasTexture(oc);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(rx || 4, ry || 4);
+  return tex;
+}
 
 function buildTextures() {
-  function makeTexture(drawFn) {
-    const oc = document.createElement('canvas');
-    oc.width = TEX_SIZE; oc.height = TEX_SIZE;
-    drawFn(oc.getContext('2d'));
-    return oc;
-  }
-
-  textures.brick = makeTexture(c => {
-    c.fillStyle = '#1a0a00';
-    c.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
-    const bH = 8, bW = 16;
-    for (let row = 0; row < TEX_SIZE / bH; row++) {
-      const offset = (row % 2) * (bW / 2);
-      for (let col = -1; col < TEX_SIZE / bW + 1; col++) {
-        const x = col * bW + offset, y = row * bH;
+  textures.brick = makeCanvasTex(256, (c, S) => {
+    c.fillStyle = '#1a0a00'; c.fillRect(0, 0, S, S);
+    const bH = 32, bW = 64;
+    for (let row = 0; row < S / bH; row++) {
+      const off = (row % 2) * (bW / 2);
+      for (let col = -1; col < S / bW + 1; col++) {
+        const x = col * bW + off, y = row * bH;
         const sh = 70 + Math.floor(Math.random() * 40);
-        c.fillStyle = `rgb(${sh},${Math.floor(sh*0.4)},${Math.floor(sh*0.2)})`;
-        c.fillRect(x + 1, y + 1, bW - 2, bH - 2);
+        c.fillStyle = `rgb(${sh},${Math.floor(sh*.42)},${Math.floor(sh*.22)})`;
+        c.fillRect(x+2, y+2, bW-4, bH-4);
+        c.fillStyle = 'rgba(0,0,0,0.18)'; c.fillRect(x+2, y+2, bW-4, 5);
       }
     }
-  });
+  }, 3, 4);
 
-  textures.concrete = makeTexture(c => {
-    c.fillStyle = '#2a2a2a';
-    c.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
-    for (let i = 0; i < 300; i++) {
-      const sh = 30 + Math.floor(Math.random() * 30);
-      c.fillStyle = `rgb(${sh},${sh},${sh})`;
-      c.fillRect(Math.random() * TEX_SIZE, Math.random() * TEX_SIZE, 2, 2);
+  textures.concrete = makeCanvasTex(256, (c, S) => {
+    c.fillStyle = '#222'; c.fillRect(0, 0, S, S);
+    for (let i = 0; i < 1200; i++) {
+      const sh = 28 + Math.floor(Math.random() * 28);
+      c.fillStyle = `rgb(${sh},${sh},${sh+2})`;
+      c.fillRect(Math.random()*S, Math.random()*S, 2, 2);
     }
-    c.strokeStyle = '#111'; c.lineWidth = 1;
-    for (let i = 0; i < 4; i++) {
-      c.beginPath();
-      c.moveTo(Math.random() * TEX_SIZE, Math.random() * TEX_SIZE);
-      for (let s = 0; s < 4; s++) c.lineTo(Math.random() * TEX_SIZE, Math.random() * TEX_SIZE);
+    c.strokeStyle = '#111'; c.lineWidth = 1.5;
+    for (let i = 0; i < 5; i++) {
+      c.beginPath(); c.moveTo(Math.random()*S, Math.random()*S);
+      for (let s = 0; s < 5; s++) c.lineTo(Math.random()*S, Math.random()*S);
       c.stroke();
     }
-  });
+  }, 2, 3);
 
-  textures.tile = makeTexture(c => {
-    c.fillStyle = '#d8d8e0';
-    c.fillRect(0, 0, TEX_SIZE, TEX_SIZE);
-    const ts = 16;
-    c.strokeStyle = '#b0b0b8'; c.lineWidth = 1;
-    for (let i = 0; i <= TEX_SIZE; i += ts) {
-      c.beginPath(); c.moveTo(i, 0); c.lineTo(i, TEX_SIZE); c.stroke();
-      c.beginPath(); c.moveTo(0, i); c.lineTo(TEX_SIZE, i); c.stroke();
+  textures.tile = makeCanvasTex(256, (c, S) => {
+    c.fillStyle = '#d4d4dc'; c.fillRect(0, 0, S, S);
+    const ts = 64;
+    c.strokeStyle = '#b0b0b8'; c.lineWidth = 2;
+    for (let i = 0; i <= S; i += ts) {
+      c.beginPath(); c.moveTo(i,0); c.lineTo(i,S); c.stroke();
+      c.beginPath(); c.moveTo(0,i); c.lineTo(S,i); c.stroke();
     }
-    for (let i = 0; i < 6; i++) {
-      c.fillStyle = 'rgba(140,140,160,0.25)';
-      c.fillRect(Math.random() * TEX_SIZE, Math.random() * TEX_SIZE, 4 + Math.random() * 10, 3 + Math.random() * 8);
+    for (let i = 0; i < 10; i++) {
+      c.fillStyle = 'rgba(140,140,155,0.2)';
+      c.fillRect(Math.random()*S, Math.random()*S, 6+Math.random()*16, 4+Math.random()*12);
     }
-  });
+  }, 3, 3);
 
-  // Pre-cache pixel data for fast column sampling
-  for (const key of ['brick', 'concrete', 'tile']) {
-    texData[key] = textures[key].getContext('2d').getImageData(0, 0, TEX_SIZE, TEX_SIZE).data;
-  }
+  textures.asphalt = makeCanvasTex(256, (c, S) => {
+    c.fillStyle = '#1a1a1a'; c.fillRect(0, 0, S, S);
+    for (let i = 0; i < 2000; i++) {
+      const sh = 18 + Math.floor(Math.random() * 22);
+      c.fillStyle = `rgb(${sh},${sh},${sh})`;
+      c.fillRect(Math.random()*S, Math.random()*S, 1, 1);
+    }
+    c.strokeStyle = '#0f0f0f'; c.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      c.beginPath(); c.moveTo(Math.random()*S, Math.random()*S);
+      for (let s = 0; s < 6; s++) c.lineTo(Math.random()*S, Math.random()*S);
+      c.stroke();
+    }
+  }, 4, 4);
+
+  textures.darkFloor = makeCanvasTex(256, (c, S) => {
+    c.fillStyle = '#0d0d10'; c.fillRect(0, 0, S, S);
+    const ts = 48;
+    c.strokeStyle = '#1a1a20'; c.lineWidth = 1;
+    for (let i = 0; i <= S; i += ts) {
+      c.beginPath(); c.moveTo(i,0); c.lineTo(i,S); c.stroke();
+      c.beginPath(); c.moveTo(0,i); c.lineTo(S,i); c.stroke();
+    }
+  }, 3, 3);
+
+  textures.whiteFloor = makeCanvasTex(256, (c, S) => {
+    c.fillStyle = '#ccccd8'; c.fillRect(0, 0, S, S);
+    const ts = 64;
+    c.strokeStyle = '#aaaabc'; c.lineWidth = 2;
+    for (let i = 0; i <= S; i += ts) {
+      c.beginPath(); c.moveTo(i,0); c.lineTo(i,S); c.stroke();
+      c.beginPath(); c.moveTo(0,i); c.lineTo(S,i); c.stroke();
+    }
+  }, 3, 3);
 }
 
-// ============================================================
-// Raycasting
-// ============================================================
-const zBuffer = new Float32Array(800);
-let currentWallTex = null;
-let currentWallTexKey = 'brick';
-let currentCeilColor = '#1a1a2e';
-let currentFloorColor = '#111118';
+// ═══════════════════════════════════════════════════════
+// Agent materials & models
+// ═══════════════════════════════════════════════════════
+const agentMats = {};
+
+function buildAgentMaterials() {
+  agentMats.vest   = new THREE.MeshStandardMaterial({ color: 0x1c2340, roughness: 0.8, metalness: 0.1 });
+  agentMats.helmet = new THREE.MeshStandardMaterial({ color: 0x1a2030, roughness: 0.7, metalness: 0.15 });
+  agentMats.visor  = new THREE.MeshStandardMaterial({ color: 0x050a14, roughness: 0.05, metalness: 0.95 });
+  agentMats.skin   = new THREE.MeshStandardMaterial({ color: 0xc49060, roughness: 0.8, metalness: 0.0 });
+  agentMats.pants  = new THREE.MeshStandardMaterial({ color: 0x141a28, roughness: 0.85, metalness: 0.0 });
+  agentMats.boots  = new THREE.MeshStandardMaterial({ color: 0x080808, roughness: 0.9, metalness: 0.05 });
+  agentMats.badge  = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.3, metalness: 0.8, emissive: 0xffd700, emissiveIntensity: 0.25 });
+}
+
+function makeAgentMesh() {
+  const root = new THREE.Group();
+
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.75, 0.32), agentMats.vest);
+  body.position.set(0, 1.25, 0); body.castShadow = true; root.add(body);
+
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.36, 0.36), agentMats.helmet);
+  head.position.set(0, 1.82, 0); head.castShadow = true; root.add(head);
+
+  const brim = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.06, 0.42), agentMats.helmet);
+  brim.position.set(0, 1.63, 0); root.add(brim);
+
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.14, 0.05), agentMats.visor);
+  visor.position.set(0, 1.76, 0.19); root.add(visor);
+
+  const badge = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.09, 0.04), agentMats.badge);
+  badge.position.set(-0.15, 1.35, 0.19); root.add(badge);
+
+  const leftArm = new THREE.Group(); leftArm.position.set(-0.38, 1.55, 0);
+  const rightArm = new THREE.Group(); rightArm.position.set(0.38, 1.55, 0);
+  const armGeo = new THREE.BoxGeometry(0.18, 0.55, 0.22);
+  const lAM = new THREE.Mesh(armGeo, agentMats.vest); lAM.position.set(0,-0.27,0); lAM.castShadow = true;
+  const rAM = new THREE.Mesh(armGeo, agentMats.vest); rAM.position.set(0,-0.27,0); rAM.castShadow = true;
+  leftArm.add(lAM); rightArm.add(rAM);
+  root.add(leftArm); root.add(rightArm);
+
+  const leftLeg = new THREE.Group(); leftLeg.position.set(-0.15, 0.88, 0);
+  const rightLeg = new THREE.Group(); rightLeg.position.set(0.15, 0.88, 0);
+  const legGeo = new THREE.BoxGeometry(0.24, 0.72, 0.24);
+  const lLM = new THREE.Mesh(legGeo, agentMats.pants); lLM.position.set(0,-0.36,0); lLM.castShadow = true;
+  const rLM = new THREE.Mesh(legGeo, agentMats.pants); rLM.position.set(0,-0.36,0); rLM.castShadow = true;
+  leftLeg.add(lLM); rightLeg.add(rLM);
+  const bootGeo = new THREE.BoxGeometry(0.26, 0.22, 0.30);
+  const lBoot = new THREE.Mesh(bootGeo, agentMats.boots); lBoot.position.set(0,-0.8,0.04);
+  const rBoot = new THREE.Mesh(bootGeo, agentMats.boots); rBoot.position.set(0,-0.8,0.04);
+  leftLeg.add(lBoot); rightLeg.add(rBoot);
+  root.add(leftLeg); root.add(rightLeg);
+
+  const glow = new THREE.PointLight(0xff1111, 0.5, 3.5);
+  glow.position.set(0, 1.4, 0);
+  root.add(glow);
+
+  root.userData = { leftArm, rightArm, leftLeg, rightLeg, walkPhase: Math.random() * Math.PI * 2 };
+  return root;
+}
+
+function animateAgentMesh(agentObj, speed, dt) {
+  const ud = agentObj.mesh.userData;
+  if (!ud) return;
+  const moving = speed > 0.1;
+  if (moving) ud.walkPhase += speed * 2.5 * dt;
+  else ud.walkPhase *= 0.9;
+  const amp = moving ? 0.45 : 0;
+  const s = Math.sin(ud.walkPhase) * amp;
+  ud.leftLeg.rotation.x  =  s;
+  ud.rightLeg.rotation.x = -s;
+  ud.leftArm.rotation.x  = -s * 0.6;
+  ud.rightArm.rotation.x =  s * 0.6;
+}
+
+// ═══════════════════════════════════════════════════════
+// Level geometry
+// ═══════════════════════════════════════════════════════
+let levelGroup = null;
+let levelAmbient = null;
+let levelFillLights = [];
+let levelFlickerLight = null;
+let flickerTimer = 0, flickerOn = true;
 let currentTrackingMultiplier = 1.0;
-let flickerTimer = 0;
-let flickerOn = true;
 
-function castRays() {
-  const startAngle = player.angle - HALF_FOV;
-  for (let col = 0; col < NUM_RAYS; col++) {
-    const rayAngle = startAngle + col * RAY_STEP;
-    const cosA = Math.cos(rayAngle);
-    const sinA = Math.sin(rayAngle);
-
-    let mapX = Math.floor(player.x);
-    let mapY = Math.floor(player.y);
-
-    const deltaDistX = Math.abs(1 / (cosA || 1e-10));
-    const deltaDistY = Math.abs(1 / (sinA || 1e-10));
-
-    let stepX, stepY, sideDistX, sideDistY;
-    if (cosA < 0) { stepX = -1; sideDistX = (player.x - mapX) * deltaDistX; }
-    else           { stepX =  1; sideDistX = (mapX + 1.0 - player.x) * deltaDistX; }
-    if (sinA < 0) { stepY = -1; sideDistY = (player.y - mapY) * deltaDistY; }
-    else           { stepY =  1; sideDistY = (mapY + 1.0 - player.y) * deltaDistY; }
-
-    let hit = false, side = 0;
-    for (let i = 0; i < MAX_DEPTH * 10 && !hit; i++) {
-      if (sideDistX < sideDistY) { sideDistX += deltaDistX; mapX += stepX; side = 0; }
-      else                        { sideDistY += deltaDistY; mapY += stepY; side = 1; }
-      if (mapAt(mapX, mapY) > 0) hit = true;
-    }
-
-    let depth = side === 0
-      ? (mapX - player.x + (1 - stepX) / 2) / cosA
-      : (mapY - player.y + (1 - stepY) / 2) / sinA;
-    depth = Math.abs(depth);
-    zBuffer[col] = depth;
-
-    const wallH = Math.min(CANVAS_H, Math.floor(CANVAS_H / (depth || 0.001)));
-    const wallTop = Math.floor(HALF_H - wallH / 2);
-
-    // Ceiling
-    const ceilShade = (currentLevelIndex === 1 && !flickerOn) ? '#040404' : currentCeilColor;
-    ctx.fillStyle = ceilShade;
-    ctx.fillRect(col, 0, 1, wallTop);
-
-    // Wall
-    if (currentWallTex) {
-      let wallX;
-      if (side === 0) wallX = player.y + depth * sinA;
-      else            wallX = player.x + depth * cosA;
-      wallX -= Math.floor(wallX);
-      const tx = Math.min(Math.floor(wallX * TEX_SIZE), TEX_SIZE - 1);
-      const sideDim = side === 1 ? 0.7 : 1.0;
-      drawTexturedStrip(currentWallTexKey, tx, wallH, wallTop, col, depth * sideDim);
-    } else {
-      const brightness = Math.max(0, 1 - depth / MAX_DEPTH);
-      const shade = side === 1 ? brightness * 0.6 : brightness;
-      const r = Math.floor(shade * 160);
-      ctx.fillStyle = `rgb(${r},${r},${Math.floor(shade * 180)})`;
-      ctx.fillRect(col, wallTop, 1, wallH);
-    }
-
-    // Floor
-    ctx.fillStyle = currentFloorColor;
-    ctx.fillRect(col, wallTop + wallH, 1, CANVAS_H - wallTop - wallH);
+function clearLevelGeometry() {
+  if (levelGroup) {
+    scene.remove(levelGroup);
+    levelGroup.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) {
+        if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+        else obj.material.dispose();
+      }
+    });
+    levelGroup = null;
   }
 }
 
-function drawTexturedStrip(texKey, tx, wallH, wallTop, col, depth) {
-  const brightness = Math.max(0.15, 1 - depth / MAX_DEPTH);
-  const srcData = texData[texKey];
-  const imgData = ctx.createImageData(1, wallH);
-  for (let y = 0; y < wallH; y++) {
-    const ty = Math.floor((y / wallH) * TEX_SIZE);
-    const s = (ty * TEX_SIZE + tx) * 4;
-    const d = y * 4;
-    imgData.data[d]   = Math.min(255, srcData[s]   * brightness);
-    imgData.data[d+1] = Math.min(255, srcData[s+1] * brightness);
-    imgData.data[d+2] = Math.min(255, srcData[s+2] * brightness);
-    imgData.data[d+3] = 255;
-  }
-  ctx.putImageData(imgData, col, wallTop);
-}
+function buildLevelGeometry(lvl) {
+  clearLevelGeometry();
+  levelGroup = new THREE.Group();
+  scene.add(levelGroup);
 
-// ============================================================
-// Sprites
-// ============================================================
-const sprites = [];
+  scene.fog = new THREE.FogExp2(lvl.fogColor, lvl.fogDensity);
+  scene.background = new THREE.Color(lvl.fogColor);
 
-function drawSprites() {
-  const sorted = sprites
-    .filter(s => !s.picked)
-    .map(s => ({ ...s, dist: (s.x - player.x) ** 2 + (s.y - player.y) ** 2 }))
-    .sort((a, b) => b.dist - a.dist);
-
-  for (const sp of sorted) {
-    const dx = sp.x - player.x;
-    const dy = sp.y - player.y;
-
-    const camDirX = Math.cos(player.angle);
-    const camDirY = Math.sin(player.angle);
-    const camPlaneX = Math.sin(player.angle);
-    const camPlaneY = -Math.cos(player.angle);
-
-    const invDet = 1.0 / (camPlaneX * camDirY - camDirX * camPlaneY);
-    const transformX = invDet * (camDirY * dx - camDirX * dy);
-    const transformY = invDet * (-camPlaneY * dx + camPlaneX * dy);
-
-    if (transformY <= 0.1) continue;
-
-    const activeCanvas = (sp.type === 'agent')
-      ? agentSprites[getAgentSpriteIndex(sp.x, sp.y, sp.facing || 0)]
-      : sp.canvas;
-    if (!activeCanvas) continue;
-
-    const screenX = Math.floor((CANVAS_W / 2) * (1 + transformX / transformY));
-    const spriteH = Math.abs(Math.floor(CANVAS_H / transformY));
-    const spriteW = Math.floor(spriteH * activeCanvas.width / activeCanvas.height);
-
-    const drawStartX = Math.max(0, Math.floor(screenX - spriteW / 2));
-    const drawEndX   = Math.min(CANVAS_W - 1, Math.floor(screenX + spriteW / 2));
-    const drawStartY = Math.max(0, Math.floor(HALF_H - spriteH / 2));
-    const drawEndY   = Math.min(CANVAS_H - 1, Math.floor(HALF_H + spriteH / 2));
-
-    for (let col = drawStartX; col <= drawEndX; col++) {
-      if (transformY >= zBuffer[col]) continue;
-      const texX = Math.floor((col - (screenX - spriteW / 2)) / spriteW * activeCanvas.width);
-      ctx.drawImage(activeCanvas, texX, 0, 1, activeCanvas.height, col, drawStartY, 1, drawEndY - drawStartY);
-    }
-  }
-}
-
-// ============================================================
-// ICE Agent Sprites — 8 pre-rendered angles
-// ============================================================
-const AGENT_SPRITE_SIZE = 128;
-const agentSprites = [];
-
-function buildAgentSprites() {
-  for (let i = 0; i < 8; i++) {
-    const oc = document.createElement('canvas');
-    oc.width = AGENT_SPRITE_SIZE;
-    oc.height = AGENT_SPRITE_SIZE;
-    drawAgentAngle(oc.getContext('2d'), i);
-    agentSprites.push(oc);
-  }
-}
-
-function drawAgentAngle(c, idx) {
-  const S = AGENT_SPRITE_SIZE;
-  c.clearRect(0, 0, S, S);
-  const cx = S / 2;
-  const gY = S - 4;
-
-  const isFront = idx === 0 || idx === 1 || idx === 7;
-  const isSide  = idx === 2 || idx === 6;
-  const isBack  = idx >= 3 && idx <= 5;
-
-  // Legs
-  c.fillStyle = '#1a1a2e';
-  if (isSide) {
-    c.fillRect(cx - 10, gY - 44, 12, 22);
-    c.fillRect(cx - 6,  gY - 22, 12, 22);
-  } else {
-    c.fillRect(cx - 14, gY - 44, 11, 44);
-    c.fillRect(cx + 3,  gY - 44, 11, 44);
-  }
-
-  // Boots
-  c.fillStyle = '#0a0a0a';
-  if (isSide) { c.fillRect(cx - 14, gY - 8, 22, 8); }
-  else { c.fillRect(cx - 16, gY - 8, 13, 8); c.fillRect(cx + 3, gY - 8, 13, 8); }
-
-  // Torso/vest
-  const tW = isSide ? 20 : 34;
-  c.fillStyle = '#1c2340';
-  c.fillRect(cx - tW / 2, gY - 82, tW, 40);
-  // Vest details
-  if (!isBack) {
-    c.fillStyle = '#2a3456';
-    c.fillRect(cx - tW/2, gY - 82, 6, 40);
-    c.fillRect(cx - 7, gY - 74, 14, 12);
-  }
-
-  // Badge
-  if (!isBack) {
-    c.fillStyle = '#c8a000';
-    c.fillRect(cx - 18, gY - 80, 11, 8);
-    c.fillStyle = '#ffd700';
-    c.fillRect(cx - 17, gY - 79, 9, 6);
-    c.fillStyle = '#000';
-    c.font = 'bold 4px monospace';
-    c.fillText('ICE', cx - 16, gY - 74);
-  }
-
-  // Arms
-  c.fillStyle = '#1a1a2e';
-  if (isFront) {
-    c.fillRect(cx - 26, gY - 80, 12, 32);
-    c.fillRect(cx + 14, gY - 80, 12, 32);
-  } else if (isSide) {
-    c.fillRect(cx - 22, gY - 78, 9, 28);
-    c.fillRect(cx + 8,  gY - 72, 9, 20);
-  } else {
-    c.fillRect(cx - 26, gY - 80, 12, 32);
-    c.fillRect(cx + 14, gY - 80, 12, 32);
-  }
-
-  // Neck
-  c.fillStyle = '#c4956a';
-  c.fillRect(cx - 6, gY - 92, 12, 12);
-
-  // Helmet shell
-  c.fillStyle = '#1c2340';
-  c.beginPath();
-  c.ellipse(cx, gY - 102, 18, 15, 0, Math.PI, 0);
-  c.fill();
-  c.fillRect(cx - 18, gY - 104, 36, 14);
-
-  // Visor
-  c.fillStyle = '#080e1c';
-  c.fillRect(cx - 15, gY - 100, 30, 12);
-  c.fillStyle = 'rgba(80,130,255,0.35)';
-  c.fillRect(cx - 13, gY - 99, 26, 4);
-
-  // Helmet straps
-  c.fillStyle = '#111';
-  c.fillRect(cx - 17, gY - 94, 4, 7);
-  c.fillRect(cx + 13, gY - 94, 4, 7);
-
-  // Helmet label
-  if (isFront) {
-    c.fillStyle = '#4fc3f7';
-    c.font = 'bold 7px monospace';
-    c.fillText('ICE', cx - 10, gY - 107);
-  }
-
-  // Shadow
-  c.fillStyle = 'rgba(0,0,0,0.35)';
-  c.beginPath();
-  c.ellipse(cx, gY, 18, 5, 0, 0, Math.PI * 2);
-  c.fill();
-}
-
-function getAgentSpriteIndex(agentX, agentY, agentAngle) {
-  const dx = player.x - agentX;
-  const dy = player.y - agentY;
-  const angleToPlayer = Math.atan2(dy, dx);
-  let diff = angleToPlayer - agentAngle;
-  while (diff < 0) diff += Math.PI * 2;
-  while (diff >= Math.PI * 2) diff -= Math.PI * 2;
-  return Math.floor((diff + Math.PI / 8) / (Math.PI / 4)) % 8;
-}
-
-// ============================================================
-// Item Icons
-// ============================================================
-const itemIcons = {};
-
-function buildItemIcons() {
-  function icon(fn) {
-    const oc = document.createElement('canvas'); oc.width = 32; oc.height = 32;
-    fn(oc.getContext('2d')); return oc;
-  }
-  itemIcons.burner = icon(c => {
-    c.fillStyle = '#333'; c.fillRect(8, 4, 16, 24);
-    c.fillStyle = '#4fc3f7'; c.fillRect(10, 7, 12, 14);
-    c.fillStyle = '#666'; c.fillRect(13, 24, 6, 2);
+  const wallMat = new THREE.MeshStandardMaterial({
+    map: textures[lvl.wallTexKey],
+    roughness: lvl.wallRoughness,
+    metalness: lvl.wallMetalness,
   });
-  itemIcons.jammer = icon(c => {
-    c.fillStyle = '#555'; c.fillRect(6, 12, 20, 14);
-    c.fillStyle = '#888'; c.fillRect(10, 6, 3, 8); c.fillRect(19, 4, 3, 10);
-    c.fillStyle = '#f44'; c.fillRect(14, 15, 4, 4);
-  });
-  itemIcons.fakeId = icon(c => {
-    c.fillStyle = '#e8d5a3'; c.fillRect(4, 8, 24, 16);
-    c.fillStyle = '#555'; c.fillRect(6, 11, 8, 8);
-    c.fillStyle = '#888'; c.fillRect(17, 13, 9, 2); c.fillRect(17, 17, 6, 2);
-  });
-  itemIcons.distraction = icon(c => {
-    c.fillStyle = '#888'; c.beginPath(); c.arc(16, 16, 10, 0, Math.PI*2); c.fill();
-    c.fillStyle = '#aaa'; c.beginPath(); c.arc(13, 12, 4, 0, Math.PI*2); c.fill();
-    c.fillStyle = '#555'; c.fillRect(14, 4, 4, 4);
-  });
-}
-
-// ============================================================
-// Inventory
-// ============================================================
-const inventory = { burner: 1, jammer: 0, fakeId: 0, distraction: 0 };
-const INVENTORY_KEYS = ['burner', 'jammer', 'fakeId', 'distraction'];
-let activeSlot = 0;
-let jammerActive = 0;
-
-// ============================================================
-// HUD
-// ============================================================
-function drawHUD() {
-  // Signal meter
-  const mW = 200, mH = 16, mX = 10, mY = 10;
-  ctx.fillStyle = 'rgba(0,0,0,0.7)';
-  ctx.fillRect(mX - 2, mY - 2, mW + 4, mH + 4);
-  const t = player.tracking;
-  ctx.fillStyle = `rgb(${Math.floor(t*255)},50,${Math.floor((1-t)*200)})`;
-  ctx.fillRect(mX, mY, Math.floor(mW * t), mH);
-  ctx.fillStyle = '#aaa';
-  ctx.font = '10px monospace';
-  ctx.fillText('SIGNAL', mX, mY + mH + 12);
-  if (player.hasPhone && !player.phoneDropped) {
-    ctx.fillStyle = '#ff4444';
-    ctx.font = 'bold 9px monospace';
-    ctx.fillText(player.phoneIsBurner ? 'BURNER ACTIVE' : 'PHONE ACTIVE', mX + 70, mY + mH + 12);
-  }
-
-  // Health
-  for (let i = 0; i < player.maxHealth; i++) {
-    ctx.fillStyle = i < player.health ? '#e53935' : '#2a1010';
-    ctx.fillRect(CANVAS_W - 90 + i * 28, 10, 22, 22);
-    if (i < player.health) {
-      ctx.fillStyle = '#ffaaaa';
-      ctx.fillRect(CANVAS_W - 90 + i * 28 + 9, 13, 4, 16);
-      ctx.fillRect(CANVAS_W - 90 + i * 28 + 5, 17, 12, 4);
+  for (let z = 0; z < lvl.mapH; z++) {
+    for (let x = 0; x < lvl.mapW; x++) {
+      if (lvl.map[z * lvl.mapW + x] === 0) continue;
+      const geo  = new THREE.BoxGeometry(CELL_SIZE, WALL_HEIGHT, CELL_SIZE);
+      const mesh = new THREE.Mesh(geo, wallMat);
+      mesh.position.set(x * CELL_SIZE + CELL_SIZE/2, WALL_HEIGHT/2, z * CELL_SIZE + CELL_SIZE/2);
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      levelGroup.add(mesh);
     }
   }
+  const floorGeo = new THREE.PlaneGeometry(lvl.mapW * CELL_SIZE, lvl.mapH * CELL_SIZE);
+  const floorMat = new THREE.MeshStandardMaterial({ map: textures[lvl.floorTexKey], roughness: 0.95, metalness: 0.0 });
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI/2;
+  floor.position.set(lvl.mapW*CELL_SIZE/2, 0, lvl.mapH*CELL_SIZE/2);
+  floor.receiveShadow = true; levelGroup.add(floor);
 
-  // Stamina bar
-  ctx.fillStyle = 'rgba(0,0,0,0.5)';
-  ctx.fillRect(CANVAS_W - 92, 36, 86, 8);
-  ctx.fillStyle = player.stamina > 0.2 ? '#78909c' : '#e57373';
-  ctx.fillRect(CANVAS_W - 92, 36, Math.floor(86 * player.stamina), 8);
-
-  // Inventory slots
-  const slotSz = 44;
-  for (let i = 0; i < 4; i++) {
-    const sx = 10 + i * (slotSz + 6), sy = CANVAS_H - slotSz - 10;
-    const key = INVENTORY_KEYS[i];
-    ctx.fillStyle = i === activeSlot ? 'rgba(79,195,247,0.25)' : 'rgba(0,0,0,0.7)';
-    ctx.fillRect(sx, sy, slotSz, slotSz);
-    ctx.strokeStyle = i === activeSlot ? '#4fc3f7' : '#444';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(sx, sy, slotSz, slotSz);
-    const ic = [itemIcons.burner, itemIcons.jammer, itemIcons.fakeId, itemIcons.distraction][i];
-    if (ic) {
-      ctx.globalAlpha = inventory[key] > 0 ? 1.0 : 0.25;
-      ctx.drawImage(ic, sx + 6, sy + 6, 32, 32);
-      ctx.globalAlpha = 1.0;
-    }
-    ctx.fillStyle = '#fff'; ctx.font = 'bold 11px monospace';
-    ctx.fillText(inventory[key], sx + slotSz - 12, sy + slotSz - 4);
-    ctx.fillStyle = '#666'; ctx.font = '9px monospace';
-    ctx.fillText((i+1).toString(), sx + 3, sy + 12);
-  }
-
-  // Controls hint
-  ctx.fillStyle = 'rgba(255,255,255,0.2)';
-  ctx.font = '9px monospace';
-  ctx.fillText('WASD:move  ←→:turn  SHIFT:sprint  SPACE:drop phone  1-4:items', CANVAS_W/2 - 195, CANVAS_H - 8);
-
-  // Minimap
-  drawMinimap();
-
-  // Jammer overlay
-  if (jammerActive > 0) {
-    ctx.fillStyle = 'rgba(0,255,0,0.07)';
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-    ctx.fillStyle = '#0f0';
-    ctx.font = 'bold 11px monospace';
-    ctx.fillText(`JAMMER: ${jammerActive.toFixed(1)}s`, 10, CANVAS_H - 60);
-  }
+  const ceilGeo = new THREE.PlaneGeometry(lvl.mapW * CELL_SIZE, lvl.mapH * CELL_SIZE);
+  const ceilMat = new THREE.MeshStandardMaterial({ color: lvl.ceilColor, roughness: 0.9, metalness: 0.0 });
+  const ceil = new THREE.Mesh(ceilGeo, ceilMat);
+  ceil.rotation.x = Math.PI/2;
+  ceil.position.set(lvl.mapW*CELL_SIZE/2, WALL_HEIGHT, lvl.mapH*CELL_SIZE/2);
+  ceil.receiveShadow = true; levelGroup.add(ceil);
 }
 
-function drawMinimap() {
-  if (!MAP.length) return;
-  const mmX = CANVAS_W - 105, mmY = 50, cellPx = 4;
-  const mmW = MAP_W * cellPx, mmH = MAP_H * cellPx;
-  ctx.fillStyle = 'rgba(0,0,0,0.75)';
-  ctx.fillRect(mmX - 2, mmY - 2, mmW + 4, mmH + 4);
-  for (let y = 0; y < MAP_H; y++) {
-    for (let x = 0; x < MAP_W; x++) {
-      ctx.fillStyle = MAP[y * MAP_W + x] > 0 ? '#445' : '#1a1a28';
-      ctx.fillRect(mmX + x * cellPx, mmY + y * cellPx, cellPx, cellPx);
-    }
-  }
-  ctx.fillStyle = '#4fc3f7';
-  ctx.fillRect(mmX + Math.floor(player.x * cellPx) - 1, mmY + Math.floor(player.y * cellPx) - 1, 3, 3);
-  for (const sp of sprites) {
-    if (sp.type !== 'agent' || sp.picked) continue;
-    ctx.fillStyle = sp.aiState === 'CHASE' ? '#f44' : sp.aiState === 'ALERT' ? '#fa0' : '#f88';
-    ctx.fillRect(mmX + Math.floor(sp.x * cellPx) - 1, mmY + Math.floor(sp.y * cellPx) - 1, 3, 3);
-  }
-}
-
-// ============================================================
-// Player movement constants
-// ============================================================
-const MOVE_SPEED    = 3.0;
-const SPRINT_MULT   = 2.0;
-const TURN_SPEED    = 2.2;
-const STAMINA_DRAIN = 0.4;
-const STAMINA_REGEN = 0.25;
-const TRACKING_FILL_BASE   = 0.012;
-const TRACKING_FILL_LOS    = 0.045;
-const TRACKING_FILL_BURNER = 0.006;
-const TRACKING_DRAIN       = 0.008;
-
-function updatePlaying(dt) {
-  if (player.invincible > 0) player.invincible -= dt;
-
-  const sprinting = (keys['ShiftLeft'] || keys['ShiftRight']) && player.stamina > 0;
-  const speed = MOVE_SPEED * (sprinting ? SPRINT_MULT : 1.0);
-
-  if (sprinting) player.stamina = Math.max(0, player.stamina - STAMINA_DRAIN * dt);
-  else           player.stamina = Math.min(1, player.stamina + STAMINA_REGEN * dt);
-
-  if (keys['ArrowLeft']  || keys['KeyA']) player.angle -= TURN_SPEED * dt;
-  if (keys['ArrowRight'] || keys['KeyD']) player.angle += TURN_SPEED * dt;
-
-  const mvX = Math.cos(player.angle) * speed * dt;
-  const mvY = Math.sin(player.angle) * speed * dt;
-  if (keys['KeyW'] || keys['ArrowUp']) {
-    if (mapAt(player.x + mvX, player.y) === 0) player.x += mvX;
-    if (mapAt(player.x, player.y + mvY) === 0) player.y += mvY;
-  }
-  if (keys['KeyS'] || keys['ArrowDown']) {
-    if (mapAt(player.x - mvX, player.y) === 0) player.x -= mvX;
-    if (mapAt(player.x, player.y - mvY) === 0) player.y -= mvY;
-  }
-  const stX = Math.cos(player.angle + Math.PI/2) * speed * dt;
-  const stY = Math.sin(player.angle + Math.PI/2) * speed * dt;
-  if (keys['KeyQ']) {
-    if (mapAt(player.x - stX, player.y) === 0) player.x -= stX;
-    if (mapAt(player.x, player.y - stY) === 0) player.y -= stY;
-  }
-  if (keys['KeyE']) {
-    if (mapAt(player.x + stX, player.y) === 0) player.x += stX;
-    if (mapAt(player.x, player.y + stY) === 0) player.y += stY;
-  }
-
-  // Tracking meter
-  const agentHasLOS = agents.some(a => a.hasLOS && !a.frozen);
-  if (player.hasPhone && !player.phoneDropped) {
-    const fillRate = (player.phoneIsBurner ? TRACKING_FILL_BURNER : TRACKING_FILL_BASE)
-                   * currentTrackingMultiplier
-                   + (agentHasLOS ? TRACKING_FILL_LOS : 0);
-    player.tracking = Math.min(1, player.tracking + fillRate * dt);
-    if (player.tracking >= 1) { enterEnding('caught'); return; }
-  } else if (player.phoneDropped) {
-    player.tracking = Math.max(0, player.tracking - TRACKING_DRAIN * dt);
-  }
-
-  // Sound alerts from sprinting
-  if (sprinting) {
-    for (const agent of agents) {
-      if (agent.soundAlert && agent.aiState === 'PATROL') {
-        const dx = agent.x - player.x, dy = agent.y - player.y;
-        if (Math.sqrt(dx*dx+dy*dy) < 3.0) {
-          agent.aiState = 'ALERT';
-          agent.alertTimer = 6.0;
-          agent.lastKnownX = player.x;
-          agent.lastKnownY = player.y;
-        }
-      }
-    }
-  }
-
-  // Jammer timer
-  if (jammerActive > 0) jammerActive = Math.max(0, jammerActive - dt);
-
-  // Subway flicker
-  if (currentLevelIndex === 1) {
-    flickerTimer += dt;
-    const flickerDur = flickerOn ? 3.0 + Math.random() * 4 : 0.08 + Math.random() * 0.15;
-    if (flickerTimer > flickerDur) { flickerOn = !flickerOn; flickerTimer = 0; }
-  }
-
-  updateAgents(dt);
-  checkPickups();
-  checkLevelExit();
-}
-
-// Phone drop
-let dropMomentTimer = 0;
-let lossScreenTimer = 0;
-let burnerOnGround = null;
-
-function handleSpacebar() {
-  if (!player.hasPhone || player.phoneDropped) return;
-  player.phoneDropped = true;
-  player.hasPhone = false;
-  STATE = 'DROP_MOMENT';
-  dropMomentTimer = 0;
-  burnerOnGround = {
-    x: player.x + Math.cos(player.angle) * 1.2,
-    y: player.y + Math.sin(player.angle) * 1.2,
-    canvas: itemIcons.burner,
-    type: 'item',
-    itemKey: 'burner_on_ground',
-  };
-  sprites.push(burnerOnGround);
-}
-
-function updateDropMoment(dt) {
-  dropMomentTimer += dt;
-  const slowDt = dt * 0.15;
-  if (keys['ArrowLeft']  || keys['KeyA']) player.angle -= TURN_SPEED * slowDt;
-  if (keys['ArrowRight'] || keys['KeyD']) player.angle += TURN_SPEED * slowDt;
-  const mvX = Math.cos(player.angle) * MOVE_SPEED * slowDt;
-  const mvY = Math.sin(player.angle) * MOVE_SPEED * slowDt;
-  if (keys['KeyW'] || keys['ArrowUp']) {
-    if (mapAt(player.x + mvX, player.y) === 0) player.x += mvX;
-    if (mapAt(player.x, player.y + mvY) === 0) player.y += mvY;
-  }
-  if (dropMomentTimer >= 2.5) { STATE = 'LOSS_SCREEN'; lossScreenTimer = 0; }
-}
-
-function updateLossScreen(dt) {
-  lossScreenTimer += dt;
-  if (lossScreenTimer > 4.0 && (keys['Space'] || keys['Enter'] || lossScreenTimer > 9.0)) {
-    STATE = 'PLAYING';
-  }
-}
-
-function playerTakeDamage() {
-  if (player.invincible > 0) return;
-  player.health -= 1;
-  player.invincible = 2.0;
-  if (player.health <= 0) enterEnding('caught');
-}
-
-// ============================================================
-// Agent AI
-// ============================================================
-const agents = [];
-const AGENT_PATROL_SPEED = 1.2;
-const AGENT_CHASE_SPEED  = 2.5;
-const AGENT_ALERT_SPEED  = 1.8;
-const AGENT_CONTACT_DIST = 0.65;
-const AGENT_FOV          = Math.PI / 2;
-const AGENT_SIGHT_RANGE  = 6;
-
-function makeAgent(x, y, facingAngle, patrolRoute, opts) {
-  const agent = {
-    x, y, facing: facingAngle,
-    type: 'agent',
-    aiState: 'PATROL',
-    patrolRoute: patrolRoute || [],
-    patrolIndex: 0,
-    alertTimer: 0,
-    lastKnownX: x, lastKnownY: y,
-    hasLOS: false,
-    frozen: false,
-    soundAlert: opts && opts.soundAlert,
-    chaseOnSight: opts && opts.chaseOnSight,
-  };
-  sprites.push(agent);
-  agents.push(agent);
-  return agent;
-}
-
-function agentHasLOS(agent) {
-  const dx = player.x - agent.x, dy = player.y - agent.y;
-  const dist = Math.sqrt(dx*dx + dy*dy);
-  if (dist > AGENT_SIGHT_RANGE) return false;
-  const atp = Math.atan2(dy, dx);
-  let diff = atp - agent.facing;
-  while (diff < -Math.PI) diff += Math.PI*2;
-  while (diff >  Math.PI) diff -= Math.PI*2;
-  if (Math.abs(diff) > AGENT_FOV/2) return false;
-  const steps = Math.ceil(dist * 6);
-  for (let i = 1; i <= steps; i++) {
-    const t = i / steps;
-    if (mapAt(agent.x + dx*t, agent.y + dy*t) > 0) return false;
-  }
-  return true;
-}
-
-function updateAgents(dt) {
-  const jFrozen = jammerActive > 0;
-  for (const agent of agents) {
-    if (jFrozen && (agent.aiState === 'ALERT' || agent.aiState === 'CHASE')) {
-      agent.frozen = true; agent.hasLOS = false; continue;
-    }
-    agent.frozen = false;
-    agent.hasLOS = agentHasLOS(agent);
-
-    if (agent.aiState === 'PATROL') {
-      if (agent.hasLOS) {
-        agent.aiState = agent.chaseOnSight ? 'CHASE' : 'CHASE';
-        agent.lastKnownX = player.x; agent.lastKnownY = player.y;
-      } else {
-        patrolMove(agent, dt);
-      }
-    } else if (agent.aiState === 'ALERT') {
-      if (agent.hasLOS) {
-        agent.aiState = 'CHASE';
-        agent.lastKnownX = player.x; agent.lastKnownY = player.y;
-      } else {
-        agent.alertTimer -= dt;
-        if (agent.alertTimer <= 0) agent.aiState = 'PATROL';
-        moveToward(agent, agent.lastKnownX, agent.lastKnownY, AGENT_ALERT_SPEED, dt);
-      }
-    } else if (agent.aiState === 'CHASE') {
-      if (agent.hasLOS) {
-        agent.lastKnownX = player.x; agent.lastKnownY = player.y;
-      }
-      const dx = agent.lastKnownX - agent.x, dy = agent.lastKnownY - agent.y;
-      if (!agent.hasLOS && Math.sqrt(dx*dx+dy*dy) < 0.3) {
-        agent.aiState = 'ALERT'; agent.alertTimer = 5.0;
-      } else {
-        moveToward(agent, agent.lastKnownX, agent.lastKnownY, AGENT_CHASE_SPEED, dt);
-      }
-      const cdx = player.x - agent.x, cdy = player.y - agent.y;
-      if (Math.sqrt(cdx*cdx+cdy*cdy) < AGENT_CONTACT_DIST) playerTakeDamage();
-    }
-  }
-}
-
-function patrolMove(agent, dt) {
-  if (!agent.patrolRoute || agent.patrolRoute.length === 0) return;
-  const tgt = agent.patrolRoute[agent.patrolIndex];
-  const dx = tgt.x - agent.x, dy = tgt.y - agent.y;
-  const dist = Math.sqrt(dx*dx+dy*dy);
-  if (dist < 0.2) { agent.patrolIndex = (agent.patrolIndex+1) % agent.patrolRoute.length; return; }
-  const nx = dx/dist, ny = dy/dist;
-  agent.facing = Math.atan2(ny, nx);
-  const nx2 = agent.x + nx*AGENT_PATROL_SPEED*dt;
-  const ny2 = agent.y + ny*AGENT_PATROL_SPEED*dt;
-  if (mapAt(nx2, agent.y) === 0) agent.x = nx2;
-  if (mapAt(agent.x, ny2) === 0) agent.y = ny2;
-}
-
-function moveToward(agent, tx, ty, speed, dt) {
-  const dx = tx - agent.x, dy = ty - agent.y;
-  const dist = Math.sqrt(dx*dx+dy*dy);
-  if (dist < 0.05) return;
-  const nx = dx/dist, ny = dy/dist;
-  agent.facing = Math.atan2(ny, nx);
-  const nx2 = agent.x + nx*speed*dt;
-  const ny2 = agent.y + ny*speed*dt;
-  if (mapAt(nx2, agent.y) === 0) agent.x = nx2;
-  if (mapAt(agent.x, ny2) === 0) agent.y = ny2;
-}
-
-// ============================================================
-// Ground items / pickups
-// ============================================================
-const groundItems = [];
-let fakeIdReady = false;
-
-function spawnItem(x, y, itemKey) {
-  const iconMap = { burner: itemIcons.burner, jammer: itemIcons.jammer, fakeId: itemIcons.fakeId, distraction: itemIcons.distraction };
-  const item = { x, y, canvas: iconMap[itemKey], type: 'item', itemKey, picked: false };
-  groundItems.push(item);
-  sprites.push(item);
-  return item;
-}
-
-function checkPickups() {
-  for (const item of groundItems) {
-    if (item.picked) continue;
-    const dx = item.x - player.x, dy = item.y - player.y;
-    if (Math.sqrt(dx*dx+dy*dy) < 0.65) {
-      item.picked = true;
-      const idx = sprites.indexOf(item);
-      if (idx !== -1) sprites.splice(idx, 1);
-      if (item.itemKey === 'burner_on_ground') {
-        player.hasPhone = true;
-        player.phoneDropped = false;
-        player.phoneIsBurner = true;
-        player.tracking = 0.5;
-        burnerOnGround = null;
-      } else {
-        const maxes = { burner: 1, jammer: 3, fakeId: 2, distraction: 5 };
-        inventory[item.itemKey] = Math.min((inventory[item.itemKey] || 0) + 1, maxes[item.itemKey] || 5);
-      }
-    }
-  }
-}
-
-function useItem(slotIndex) {
-  const key = INVENTORY_KEYS[slotIndex];
-  if (inventory[key] <= 0) return;
-  activeSlot = slotIndex;
-
-  if (key === 'burner') {
-    if (player.hasPhone) return;
-    player.hasPhone = true;
-    player.phoneDropped = false;
-    player.phoneIsBurner = true;
-    player.tracking = 0.5;
-    inventory.burner = 0;
-  } else if (key === 'jammer') {
-    jammerActive = 8.0;
-    for (const agent of agents) {
-      if (agent.aiState === 'ALERT' || agent.aiState === 'CHASE') agent.frozen = true;
-    }
-    inventory.jammer -= 1;
-  } else if (key === 'fakeId') {
-    fakeIdReady = true;
-    inventory.fakeId -= 1;
-  } else if (key === 'distraction') {
-    throwDistraction();
-    inventory.distraction -= 1;
-  }
-}
-
-function throwDistraction() {
-  const throwX = player.x + Math.cos(player.angle) * 4;
-  const throwY = player.y + Math.sin(player.angle) * 4;
-  let nearest = null, nearestDist = Infinity;
-  for (const agent of agents) {
-    if (agent.aiState === 'PATROL') {
-      const dx = agent.x - player.x, dy = agent.y - player.y;
-      const d = dx*dx + dy*dy;
-      if (d < nearestDist) { nearestDist = d; nearest = agent; }
-    }
-  }
-  if (nearest) {
-    nearest.aiState = 'ALERT';
-    nearest.alertTimer = 6.0;
-    nearest.lastKnownX = throwX;
-    nearest.lastKnownY = throwY;
-  }
-}
-
-// ============================================================
+// ═══════════════════════════════════════════════════════
 // Level definitions
-// ============================================================
+// ═══════════════════════════════════════════════════════
 let currentLevelIndex = 0;
-let levelTransitionText = '';
-let levelTransitionTimer = 0;
 let nextLevelIndex = 0;
-const LEVEL_TRANSITION_DURATION = 5.0;
+let levelTransitionTimer = 0;
+const LEVEL_TRANSITION_DURATION = 5.5;
 
 const LEVELS = [
   {
@@ -944,23 +392,29 @@ const LEVELS = [
       1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
       1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
     ],
-    wallTex: 'brick',
-    ceilColor: '#0a0a14',
-    floorColor: '#111118',
-    playerStart: { x: 1.5, y: 1.5, angle: 0 },
+    wallTexKey: 'brick', floorTexKey: 'asphalt', ceilColor: 0x04040e,
+    wallRoughness: 0.9, wallMetalness: 0.0,
+    fogColor: 0x04040e, fogDensity: 0.04,
+    ambientColor: 0x06060f, ambientIntensity: 0.3,
+    playerStart: { x: 1.5, z: 1.5, angle: 0 },
     agents: [
-      { x: 6.0, y: 5.0, angle: 0, route: [{x:6,y:5},{x:6,y:2},{x:10,y:2},{x:10,y:5}] },
-      { x: 12.0, y: 7.0, angle: Math.PI, route: [{x:12,y:7},{x:12,y:3},{x:8,y:3},{x:8,y:7}] },
+      { x: 6.5, z: 5.0, angle: 0, route: [{x:6.5,z:5},{x:6.5,z:2},{x:10.5,z:2},{x:10.5,z:5}] },
+      { x: 12.5, z: 7.0, angle: Math.PI, route: [{x:12.5,z:7},{x:12.5,z:3},{x:8.5,z:3},{x:8.5,z:7}] },
     ],
     items: [
-      { x: 3.5, y: 7.5, key: 'jammer' },
-      { x: 8.5, y: 8.5, key: 'distraction' },
-      { x: 11.5, y: 8.5, key: 'distraction' },
+      { x: 3.5, z: 7.5, key: 'jammer' },
+      { x: 8.5, z: 8.5, key: 'distraction' },
+      { x: 11.5, z: 8.5, key: 'distraction' },
     ],
-    checkpoints: [{ x: 9, y: 5, requiresFakeId: true, requiresPhone: true, passed: false }],
-    exitTrigger: { x: 14.5, y: 1.5, radius: 0.9 },
+    checkpoints: [{ gx: 9, gz: 5, requiresFakeId: true, passed: false }],
+    exitTrigger: { x: 14.5 * CELL_SIZE, z: 1.5 * CELL_SIZE, radius: 1.8 },
     trackingMultiplier: 1.0,
-    transitionText: null,
+    transitionLines: null,
+    fillLights: [
+      { x: 4,  z: 4,  color: 0xff6a1a, intensity: 0.6, distance: 8 },
+      { x: 12, z: 6,  color: 0xff6a1a, intensity: 0.5, distance: 7 },
+    ],
+    flickerLight: null,
   },
   {
     mapW: 14, mapH: 12,
@@ -978,24 +432,30 @@ const LEVELS = [
       1,0,0,0,0,0,0,0,0,0,0,0,0,1,
       1,1,1,1,1,1,1,1,1,1,1,1,1,1,
     ],
-    wallTex: 'concrete',
-    ceilColor: '#080808',
-    floorColor: '#0d0d10',
-    playerStart: { x: 1.5, y: 1.5, angle: 0 },
+    wallTexKey: 'concrete', floorTexKey: 'darkFloor', ceilColor: 0x050505,
+    wallRoughness: 0.88, wallMetalness: 0.02,
+    fogColor: 0x050505, fogDensity: 0.07,
+    ambientColor: 0x04040a, ambientIntensity: 0.2,
+    playerStart: { x: 1.5, z: 1.5, angle: 0 },
     agents: [
-      { x: 5.0, y: 3.0, angle: 0, route: [{x:5,y:3},{x:5,y:8},{x:9,y:8},{x:9,y:3}] },
-      { x: 8.0, y: 5.0, angle: Math.PI, route: [], opts: { soundAlert: true } },
-      { x: 10.0, y: 9.0, angle: 0, route: [], opts: { soundAlert: true } },
+      { x: 5.0, z: 3.0, angle: 0, route: [{x:5,z:3},{x:5,z:8},{x:9,z:8},{x:9,z:3}] },
+      { x: 8.0, z: 5.0, angle: Math.PI, route: [], soundAlert: true },
+      { x: 10.0, z: 9.0, angle: 0, route: [], soundAlert: true },
     ],
     items: [
-      { x: 3.5, y: 9.5, key: 'burner' },
-      { x: 7.5, y: 2.5, key: 'fakeId' },
-      { x: 11.5, y: 5.5, key: 'jammer' },
+      { x: 3.5, z: 9.5, key: 'burner' },
+      { x: 7.5, z: 2.5, key: 'fakeId' },
+      { x: 11.5, z: 5.5, key: 'jammer' },
     ],
     checkpoints: [],
-    exitTrigger: { x: 12.5, y: 10.5, radius: 0.9 },
+    exitTrigger: { x: 12.5 * CELL_SIZE, z: 10.5 * CELL_SIZE, radius: 1.8 },
     trackingMultiplier: 1.0,
-    transitionText: "You made it underground.\nBut ICE bought your subway tap data from a data broker.",
+    transitionLines: ["You made it underground.", "But ICE bought your subway tap data from a data broker."],
+    fillLights: [
+      { x: 4,  z: 6,  color: 0x1a1aff, intensity: 0.4, distance: 6 },
+      { x: 10, z: 5,  color: 0x1a1aff, intensity: 0.35, distance: 5 },
+    ],
+    flickerLight: { x: 7, z: 5, color: 0xffffaa, intensity: 1.2, distance: 7 },
   },
   {
     mapW: 16, mapH: 14,
@@ -1015,89 +475,496 @@ const LEVELS = [
       1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
       1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
     ],
-    wallTex: 'tile',
-    ceilColor: '#dcdce8',
-    floorColor: '#ccccd8',
-    playerStart: { x: 1.5, y: 1.5, angle: 0 },
+    wallTexKey: 'tile', floorTexKey: 'whiteFloor', ceilColor: 0xd8d8e4,
+    wallRoughness: 0.4, wallMetalness: 0.05,
+    fogColor: 0xc0c0d0, fogDensity: 0.015,
+    ambientColor: 0x9090a8, ambientIntensity: 0.8,
+    playerStart: { x: 1.5, z: 1.5, angle: 0 },
     agents: [
-      { x: 5.0, y: 4.0, angle: 0, route: [{x:5,y:4},{x:5,y:10},{x:12,y:10},{x:12,y:4}] },
-      { x: 12.0, y: 7.0, angle: Math.PI, route: [{x:12,y:7},{x:8,y:7},{x:8,y:11},{x:12,y:11}] },
-      { x: 8.0, y: 5.0, angle: 0, route: [], opts: { chaseOnSight: true } },
-      { x: 13.5, y: 12.5, angle: Math.PI, route: [] },
+      { x: 5.0, z: 4.0, angle: 0, route: [{x:5,z:4},{x:5,z:10},{x:12,z:10},{x:12,z:4}] },
+      { x: 12.0, z: 7.0, angle: Math.PI, route: [{x:12,z:7},{x:8,z:7},{x:8,z:11},{x:12,z:11}] },
+      { x: 8.0, z: 5.0, angle: 0, route: [], chaseOnSight: true },
+      { x: 13.5, z: 12.5, angle: Math.PI, route: [] },
     ],
     items: [
-      { x: 3.5, y: 11.5, key: 'jammer' },
-      { x: 9.5, y: 3.5, key: 'distraction' },
+      { x: 3.5, z: 11.5, key: 'jammer' },
+      { x: 9.5, z: 3.5, key: 'distraction' },
     ],
     checkpoints: [],
-    exitTrigger: { x: 14.5, y: 12.5, radius: 0.9 },
+    exitTrigger: { x: 14.5 * CELL_SIZE, z: 12.5 * CELL_SIZE, radius: 1.8 },
     trackingMultiplier: 3.0,
-    transitionText: "You reached the building.\nICE has a $1 billion Palantir contract to find you.",
+    transitionLines: ["You reached the building.", "ICE has a $1 billion Palantir contract to find you."],
+    fillLights: [
+      { x: 5,  z: 5,  color: 0xffffff, intensity: 0.7, distance: 10 },
+      { x: 12, z: 5,  color: 0xffffff, intensity: 0.7, distance: 10 },
+      { x: 7,  z: 11, color: 0xffffff, intensity: 0.6, distance: 9  },
+    ],
+    flickerLight: null,
   },
 ];
 
+// ═══════════════════════════════════════════════════════
+// Agents
+// ═══════════════════════════════════════════════════════
+const agents = [];
+
+function clearAgents() {
+  for (const a of agents) { scene.remove(a.mesh); }
+  agents.length = 0;
+}
+
+function spawnAgent(wx, wz, facingAngle, patrolRoute, opts) {
+  const mesh = makeAgentMesh();
+  mesh.position.set(wx, 0, wz);
+  mesh.rotation.y = facingAngle;
+  scene.add(mesh);
+  const agent = {
+    x: wx, z: wz,
+    facing: facingAngle,
+    mesh,
+    aiState: 'PATROL',
+    patrolRoute: (patrolRoute || []).map(p => ({ x: p.x * CELL_SIZE, z: p.z * CELL_SIZE })),
+    patrolIndex: 0,
+    alertTimer: 0,
+    lastKnownX: wx, lastKnownZ: wz,
+    hasLOS: false,
+    frozen: false,
+    soundAlert: !!(opts && opts.soundAlert),
+    chaseOnSight: !!(opts && opts.chaseOnSight),
+    moveSpeed: 0,
+  };
+  agents.push(agent);
+  return agent;
+}
+
+// ═══════════════════════════════════════════════════════
+// Ground items
+// ═══════════════════════════════════════════════════════
+const groundItems = [];
+const ITEM_COLORS = { burner: 0x4fc3f7, jammer: 0x00ff44, fakeId: 0xffd700, distraction: 0xff8800 };
+
+function spawnGroundItem(wx, wz, key) {
+  const geo = new THREE.BoxGeometry(0.35, 0.35, 0.35);
+  const mat = new THREE.MeshStandardMaterial({
+    color: ITEM_COLORS[key] || 0xffffff,
+    emissive: ITEM_COLORS[key] || 0xffffff,
+    emissiveIntensity: 0.6, roughness: 0.3, metalness: 0.5,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(wx, 0.5, wz);
+  mesh.castShadow = true;
+  scene.add(mesh);
+  const light = new THREE.PointLight(ITEM_COLORS[key] || 0xffffff, 0.8, 2.5);
+  light.position.set(wx, 0.7, wz);
+  scene.add(light);
+  const item = { wx, wz, key, mesh, light, picked: false, phase: Math.random() * Math.PI * 2 };
+  groundItems.push(item);
+  return item;
+}
+
+function clearGroundItems() {
+  for (const gi of groundItems) {
+    scene.remove(gi.mesh); scene.remove(gi.light);
+    gi.mesh.geometry.dispose(); gi.mesh.material.dispose();
+  }
+  groundItems.length = 0;
+}
+
+// ═══════════════════════════════════════════════════════
+// Inventory
+// ═══════════════════════════════════════════════════════
+const inventory = { burner: 1, jammer: 0, fakeId: 0, distraction: 0 };
+const INVENTORY_KEYS = ['burner', 'jammer', 'fakeId', 'distraction'];
+let activeSlot = 0;
+let jammerActive = 0;
+let fakeIdReady = false;
+let dropMomentTimer = 0;
+let burnerMesh = null;
+
+// ═══════════════════════════════════════════════════════
+// Load level
+// ═══════════════════════════════════════════════════════
 function loadLevel(index) {
   currentLevelIndex = index;
   const lvl = LEVELS[index];
 
-  agents.length = 0;
-  groundItems.length = 0;
-  sprites.length = 0;
+  for (const cp of (lvl.checkpoints || [])) cp.passed = false;
 
-  MAP = lvl.map;
-  MAP_W = lvl.mapW;
-  MAP_H = lvl.mapH;
+  buildLevelGeometry(lvl);
+  MAP = lvl.map; MAP_W = lvl.mapW; MAP_H = lvl.mapH;
 
-  currentWallTex = textures[lvl.wallTex];
-  currentWallTexKey = lvl.wallTex;
-  currentCeilColor = lvl.ceilColor;
-  currentFloorColor = lvl.floorColor;
-
-  player.x = lvl.playerStart.x;
-  player.y = lvl.playerStart.y;
-  player.angle = lvl.playerStart.angle;
+  player.x = lvl.playerStart.x * CELL_SIZE;
+  player.z = lvl.playerStart.z * CELL_SIZE;
+  player.angleY = lvl.playerStart.angle;
+  player.angleX = 0;
   player.phoneIsBurner = false;
   currentTrackingMultiplier = lvl.trackingMultiplier;
   flickerOn = true; flickerTimer = 0;
 
+  if (levelAmbient) { scene.remove(levelAmbient); levelAmbient = null; }
+  for (const l of levelFillLights) scene.remove(l);
+  levelFillLights = [];
+  if (levelFlickerLight) { scene.remove(levelFlickerLight); levelFlickerLight = null; }
+
+  levelAmbient = new THREE.AmbientLight(lvl.ambientColor, lvl.ambientIntensity);
+  scene.add(levelAmbient);
+
+  for (const lDef of (lvl.fillLights || [])) {
+    const light = new THREE.PointLight(lDef.color, lDef.intensity, lDef.distance);
+    light.position.set(lDef.x * CELL_SIZE, WALL_HEIGHT * 0.7, lDef.z * CELL_SIZE);
+    scene.add(light);
+    levelFillLights.push(light);
+  }
+
+  if (lvl.flickerLight) {
+    const fl = lvl.flickerLight;
+    levelFlickerLight = new THREE.PointLight(fl.color, fl.intensity, fl.distance);
+    levelFlickerLight.position.set(fl.x * CELL_SIZE, WALL_HEIGHT - 0.2, fl.z * CELL_SIZE);
+    scene.add(levelFlickerLight);
+  }
+
+  clearAgents();
   for (const a of lvl.agents) {
-    makeAgent(a.x, a.y, a.angle, a.route, a.opts);
+    spawnAgent(a.x * CELL_SIZE, a.z * CELL_SIZE, a.angle, a.route, a);
   }
+  clearGroundItems();
   for (const item of lvl.items) {
-    spawnItem(item.x, item.y, item.key);
+    spawnGroundItem(item.x * CELL_SIZE, item.z * CELL_SIZE, item.key);
   }
 
-  burnerOnGround = null;
-  jammerActive = 0;
-  fakeIdReady = false;
-
-  // Reset checkpoint passed flags
-  for (const cp of (lvl.checkpoints || [])) cp.passed = false;
+  if (burnerMesh) { scene.remove(burnerMesh); burnerMesh = null; }
+  jammerActive = 0; fakeIdReady = false;
 }
 
-function checkLevelExit() {
-  const lvl = LEVELS[currentLevelIndex];
+// ═══════════════════════════════════════════════════════
+// Update & Render
+// ═══════════════════════════════════════════════════════
+let lastTime = 0;
+function gameLoop(ts) {
+  const dt = Math.min((ts - lastTime) / 1000, 0.05);
+  lastTime = ts;
+  update(dt);
+  renderer.render(scene, camera);
+  updateMinimap();
+  requestAnimationFrame(gameLoop);
+}
 
-  for (const cp of (lvl.checkpoints || [])) {
-    if (cp.passed) continue;
-    const dx = player.x - cp.x, dy = player.y - cp.y;
-    if (Math.abs(dx) < 0.8 && Math.abs(dy) < 0.8) {
-      if (cp.requiresFakeId && !fakeIdReady) {
-        // Push player back
-        if (dx > 0) player.x = cp.x + 0.85;
-        else player.x = cp.x - 0.85;
-        return;
+function update(dt) {
+  // Mouse look
+  player.angleY -= mouseDX * TURN_SPEED;
+  player.angleX  = Math.max(-Math.PI/3, Math.min(Math.PI/3, player.angleX - mouseDY * TURN_SPEED));
+  mouseDX = 0; mouseDY = 0;
+
+  // Sync camera
+  cameraPivot.position.set(player.x, PLAYER_HEIGHT, player.z);
+  cameraPivot.rotation.y = player.angleY;
+  camera.rotation.x = player.angleX;
+
+  // Subway flicker
+  if (currentLevelIndex === 1 && levelFlickerLight) {
+    flickerTimer += dt;
+    const dur = flickerOn ? 2.5 + Math.random() * 4 : 0.06 + Math.random() * 0.12;
+    if (flickerTimer > dur) { flickerOn = !flickerOn; flickerTimer = 0; }
+    levelFlickerLight.intensity = flickerOn ? LEVELS[1].flickerLight.intensity : 0;
+  }
+
+  if (STATE === 'PLAYING') updatePlaying(dt);
+  else if (STATE === 'DROP_MOMENT') { dropMomentTimer += dt; }
+  else if (STATE === 'LEVEL_TRANSITION') updateLevelTransition(dt);
+  else if (STATE === 'ENDING') updateEnding(dt);
+}
+
+function updatePlaying(dt) {
+  if (player.invincible > 0) player.invincible -= dt;
+
+  const sprinting = (keys['ShiftLeft'] || keys['ShiftRight']) && player.stamina > 0;
+  const speed = MOVE_SPEED * (sprinting ? SPRINT_MULT : 1.0);
+  if (sprinting) player.stamina = Math.max(0, player.stamina - STAMINA_DRAIN * dt);
+  else           player.stamina = Math.min(1, player.stamina + STAMINA_REGEN * dt);
+
+  const fwdX = -Math.sin(player.angleY), fwdZ = -Math.cos(player.angleY);
+  const rgtX = -Math.sin(player.angleY - Math.PI/2), rgtZ = -Math.cos(player.angleY - Math.PI/2);
+
+  let dx = 0, dz = 0;
+  if (keys['KeyW'] || keys['ArrowUp'])   { dx += fwdX; dz += fwdZ; }
+  if (keys['KeyS'] || keys['ArrowDown']) { dx -= fwdX; dz -= fwdZ; }
+  if (keys['KeyA'])                      { dx -= rgtX; dz -= rgtZ; }
+  if (keys['KeyD'])                      { dx += rgtX; dz += rgtZ; }
+
+  const len = Math.sqrt(dx*dx + dz*dz);
+  if (len > 0) { dx /= len; dz /= len; }
+
+  const nx = player.x + dx * speed * dt;
+  const nz = player.z + dz * speed * dt;
+  if (canMove(nx, player.z)) player.x = nx;
+  if (canMove(player.x, nz)) player.z = nz;
+
+  // Sound alerts
+  if (sprinting) {
+    for (const a of agents) {
+      if (a.soundAlert && a.aiState === 'PATROL') {
+        const ddx = a.x - player.x, ddz = a.z - player.z;
+        if (Math.sqrt(ddx*ddx+ddz*ddz) < CELL_SIZE * 3) {
+          a.aiState = 'ALERT'; a.alertTimer = 6.0;
+          a.lastKnownX = player.x; a.lastKnownZ = player.z;
+        }
       }
-      cp.passed = true;
-      if (fakeIdReady) fakeIdReady = false;
     }
   }
 
-  const ex = lvl.exitTrigger;
-  const dx = player.x - ex.x, dy = player.y - ex.y;
-  if (Math.sqrt(dx*dx+dy*dy) < ex.radius) {
-    advanceLevel();
+  // Tracking
+  const agentHasLOS = agents.some(a => a.hasLOS && !a.frozen);
+  if (player.hasPhone && !player.phoneDropped) {
+    const rate = (player.phoneIsBurner ? TRACKING_BURNER : TRACKING_BASE)
+               * currentTrackingMultiplier
+               + (agentHasLOS ? TRACKING_LOS : 0);
+    player.tracking = Math.min(1, player.tracking + rate * dt);
+    if (player.tracking >= 1) { enterEnding('caught'); return; }
+  } else if (player.phoneDropped) {
+    player.tracking = Math.max(0, player.tracking - TRACKING_DRAIN * dt);
   }
+
+  if (jammerActive > 0) jammerActive = Math.max(0, jammerActive - dt);
+
+  // Item bob
+  const t = Date.now() * 0.003;
+  for (const gi of groundItems) {
+    if (!gi.picked && gi.mesh) {
+      gi.mesh.position.y = 0.5 + Math.sin(t + gi.phase) * 0.1;
+      gi.mesh.rotation.y += dt * 0.8;
+    }
+  }
+  if (burnerMesh) {
+    burnerMesh.position.y = 0.5 + Math.sin(t) * 0.1;
+    burnerMesh.rotation.y += dt;
+  }
+
+  updateAgents(dt);
+  checkPickups();
+  checkLevelExit();
+  updateHUD();
+}
+
+// ═══════════════════════════════════════════════════════
+// Agent AI
+// ═══════════════════════════════════════════════════════
+function computeAgentLOS(agent) {
+  const dx = player.x - agent.x, dz = player.z - agent.z;
+  const dist = Math.sqrt(dx*dx + dz*dz);
+  if (dist > AGENT_SIGHT_RANGE) return false;
+
+  // Angle check — agent faces +Z when rotation.y = 0 (Three.js convention)
+  // agent.facing is stored as the rotation.y angle
+  // Direction agent is looking: (-sin(facing), -cos(facing)) in XZ
+  const agentDirX = -Math.sin(agent.facing);
+  const agentDirZ = -Math.cos(agent.facing);
+  const toDirX = dx / dist, toDirZ = dz / dist;
+  const dot = agentDirX * toDirX + agentDirZ * toDirZ;
+  if (dot < Math.cos(AGENT_FOV / 2)) return false;
+
+  // Wall check
+  const steps = Math.ceil(dist / CELL_SIZE * 5);
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    const { gx, gz } = worldToGrid(agent.x + dx*t, agent.z + dz*t);
+    if (mapAt(gx, gz) > 0) return false;
+  }
+  return true;
+}
+
+function updateAgents(dt) {
+  const jFrozen = jammerActive > 0;
+  for (const a of agents) {
+    if (jFrozen && (a.aiState === 'ALERT' || a.aiState === 'CHASE')) {
+      a.frozen = true; a.hasLOS = false; a.moveSpeed = 0;
+      animateAgentMesh(a, 0, dt); continue;
+    }
+    a.frozen = false;
+    a.hasLOS = computeAgentLOS(a);
+
+    let targetX = a.x, targetZ = a.z, moveSpd = 0;
+
+    if (a.aiState === 'PATROL') {
+      if (a.hasLOS) {
+        a.aiState = 'CHASE';
+        a.lastKnownX = player.x; a.lastKnownZ = player.z;
+      } else if (a.patrolRoute.length > 0) {
+        const tgt = a.patrolRoute[a.patrolIndex];
+        const ddx = tgt.x - a.x, ddz = tgt.z - a.z;
+        if (Math.sqrt(ddx*ddx+ddz*ddz) < 0.3) {
+          a.patrolIndex = (a.patrolIndex + 1) % a.patrolRoute.length;
+        } else { targetX = tgt.x; targetZ = tgt.z; moveSpd = AGENT_PATROL_SPEED; }
+      }
+    } else if (a.aiState === 'ALERT') {
+      if (a.hasLOS) {
+        a.aiState = 'CHASE';
+        a.lastKnownX = player.x; a.lastKnownZ = player.z;
+      } else {
+        a.alertTimer -= dt;
+        if (a.alertTimer <= 0) a.aiState = 'PATROL';
+        targetX = a.lastKnownX; targetZ = a.lastKnownZ; moveSpd = AGENT_ALERT_SPEED;
+        const ddx2 = a.lastKnownX - a.x, ddz2 = a.lastKnownZ - a.z;
+        if (Math.sqrt(ddx2*ddx2+ddz2*ddz2) < 0.5) moveSpd = 0;
+      }
+    } else if (a.aiState === 'CHASE') {
+      if (a.hasLOS) { a.lastKnownX = player.x; a.lastKnownZ = player.z; }
+      targetX = a.lastKnownX; targetZ = a.lastKnownZ; moveSpd = AGENT_CHASE_SPEED;
+      const ddx3 = a.lastKnownX - a.x, ddz3 = a.lastKnownZ - a.z;
+      if (!a.hasLOS && Math.sqrt(ddx3*ddx3+ddz3*ddz3) < 0.5) {
+        a.aiState = 'ALERT'; a.alertTimer = 5.0; moveSpd = 0;
+      }
+      const cdx = player.x - a.x, cdz = player.z - a.z;
+      if (Math.sqrt(cdx*cdx+cdz*cdz) < AGENT_CONTACT_DIST) playerTakeDamage();
+    }
+
+    if (moveSpd > 0) {
+      const ddx = targetX - a.x, ddz = targetZ - a.z;
+      const dist = Math.sqrt(ddx*ddx+ddz*ddz);
+      if (dist > 0.05) {
+        const nx2 = ddx/dist, nz2 = ddz/dist;
+        a.facing = Math.atan2(-nx2, -nz2); // Three.js Y rotation to face direction
+        const newX = a.x + nx2 * moveSpd * dt;
+        const newZ = a.z + nz2 * moveSpd * dt;
+        if (mapAt(worldToGrid(newX, a.z).gx, worldToGrid(newX, a.z).gz) === 0) a.x = newX;
+        if (mapAt(worldToGrid(a.x, newZ).gx, worldToGrid(a.x, newZ).gz) === 0) a.z = newZ;
+      }
+    }
+
+    a.moveSpeed = moveSpd;
+    a.mesh.position.set(a.x, 0, a.z);
+    a.mesh.rotation.y = a.facing;
+    animateAgentMesh(a, moveSpd, dt);
+
+    const glowLight = a.mesh.children.find(c => c.isPointLight);
+    if (glowLight) {
+      glowLight.color.setHex(a.aiState === 'CHASE' ? 0xff0000 : a.aiState === 'ALERT' ? 0xff6600 : 0x880000);
+      glowLight.intensity = a.aiState === 'CHASE' ? 1.2 : a.aiState === 'ALERT' ? 0.8 : 0.4;
+    }
+  }
+}
+
+function playerTakeDamage() {
+  if (player.invincible > 0) return;
+  player.health -= 1;
+  player.invincible = 2.0;
+  const flash = document.getElementById('damage-flash');
+  flash.style.background = 'rgba(200,0,0,0.45)';
+  setTimeout(() => { flash.style.background = 'rgba(200,0,0,0)'; }, 120);
+  if (player.health <= 0) enterEnding('caught');
+}
+
+// ═══════════════════════════════════════════════════════
+// Pickups & inventory
+// ═══════════════════════════════════════════════════════
+function checkPickups() {
+  for (const gi of groundItems) {
+    if (gi.picked) continue;
+    const dx = gi.wx - player.x, dz = gi.wz - player.z;
+    if (Math.sqrt(dx*dx+dz*dz) < 1.1) {
+      gi.picked = true;
+      scene.remove(gi.mesh); scene.remove(gi.light);
+      const maxes = { burner: 1, jammer: 3, fakeId: 2, distraction: 5 };
+      inventory[gi.key] = Math.min((inventory[gi.key] || 0) + 1, maxes[gi.key] || 5);
+    }
+  }
+  if (burnerMesh) {
+    const dx = burnerMesh.position.x - player.x, dz = burnerMesh.position.z - player.z;
+    if (Math.sqrt(dx*dx+dz*dz) < 1.1) {
+      scene.remove(burnerMesh); burnerMesh = null;
+      player.hasPhone = true; player.phoneDropped = false;
+      player.phoneIsBurner = true; player.tracking = 0.5;
+    }
+  }
+}
+
+function useItem(slotIndex) {
+  const key = INVENTORY_KEYS[slotIndex];
+  if ((inventory[key] || 0) <= 0) return;
+  activeSlot = slotIndex;
+
+  if (key === 'burner') {
+    if (player.hasPhone) return;
+    player.hasPhone = true; player.phoneDropped = false;
+    player.phoneIsBurner = true; player.tracking = 0.5;
+    inventory.burner = 0;
+  } else if (key === 'jammer') {
+    jammerActive = 8.0;
+    for (const a of agents) {
+      if (a.aiState === 'ALERT' || a.aiState === 'CHASE') a.frozen = true;
+    }
+    inventory.jammer -= 1;
+  } else if (key === 'fakeId') {
+    fakeIdReady = true; inventory.fakeId -= 1;
+  } else if (key === 'distraction') {
+    const throwX = player.x - Math.sin(player.angleY) * CELL_SIZE * 4;
+    const throwZ = player.z - Math.cos(player.angleY) * CELL_SIZE * 4;
+    let nearest = null, nearestD = Infinity;
+    for (const a of agents) {
+      if (a.aiState === 'PATROL') {
+        const dx = a.x - player.x, dz = a.z - player.z;
+        const d = dx*dx + dz*dz;
+        if (d < nearestD) { nearestD = d; nearest = a; }
+      }
+    }
+    if (nearest) {
+      nearest.aiState = 'ALERT'; nearest.alertTimer = 6.0;
+      nearest.lastKnownX = throwX; nearest.lastKnownZ = throwZ;
+    }
+    inventory.distraction -= 1;
+  }
+}
+
+function handlePhoneDrop() {
+  if (!player.hasPhone || player.phoneDropped) return;
+  player.hasPhone = false; player.phoneDropped = true;
+  STATE = 'DROP_MOMENT'; dropMomentTimer = 0;
+
+  const bx = player.x - Math.sin(player.angleY) * CELL_SIZE * 1.2;
+  const bz = player.z - Math.cos(player.angleY) * CELL_SIZE * 1.2;
+  const geo = new THREE.BoxGeometry(0.18, 0.32, 0.06);
+  const mat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.6, metalness: 0.3,
+    emissive: 0x4fc3f7, emissiveIntensity: 0.4 });
+  burnerMesh = new THREE.Mesh(geo, mat);
+  burnerMesh.position.set(bx, 0.5, bz);
+  burnerMesh.castShadow = true;
+  scene.add(burnerMesh);
+
+  showScreen('loss-screen');
+  showHUD(false);
+  const items = document.querySelectorAll('#loss-items li');
+  items.forEach((li, i) => {
+    li.style.opacity = '0';
+    setTimeout(() => { li.style.opacity = '1'; }, 300 + i * 400);
+  });
+  setTimeout(() => { document.getElementById('loss-continue').style.opacity = '1'; }, 3500);
+}
+
+function resumeFromLoss() {
+  STATE = 'PLAYING';
+  showScreen(null);
+  showHUD(true);
+  renderer.domElement.requestPointerLock();
+}
+
+// ═══════════════════════════════════════════════════════
+// Level exit
+// ═══════════════════════════════════════════════════════
+function checkLevelExit() {
+  const lvl = LEVELS[currentLevelIndex];
+  for (const cp of (lvl.checkpoints || [])) {
+    if (cp.passed) continue;
+    const cpWx = cp.gx * CELL_SIZE, cpWz = cp.gz * CELL_SIZE;
+    const dx = player.x - cpWx, dz = player.z - cpWz;
+    if (Math.abs(dx) < CELL_SIZE * 0.9 && Math.abs(dz) < CELL_SIZE * 0.9) {
+      if (cp.requiresFakeId && !fakeIdReady) {
+        player.x -= dx * 0.15; player.z -= dz * 0.15; return;
+      }
+      cp.passed = true; if (fakeIdReady) fakeIdReady = false;
+    }
+  }
+  const ex = lvl.exitTrigger;
+  const dx = player.x - ex.x, dz = player.z - ex.z;
+  if (Math.sqrt(dx*dx+dz*dz) < ex.radius) advanceLevel();
 }
 
 function advanceLevel() {
@@ -1106,10 +973,14 @@ function advanceLevel() {
     enterEnding(player.hasPhone ? 'escaped_with_phone' : 'escaped_no_phone');
     return;
   }
-  levelTransitionText = LEVELS[nextIdx].transitionText || '';
+  const lines = LEVELS[nextIdx].transitionLines;
+  document.getElementById('transition-text1').textContent = lines ? lines[0] : '';
+  document.getElementById('transition-text2').textContent = lines ? lines[1] : '';
   levelTransitionTimer = 0;
   nextLevelIndex = nextIdx;
   STATE = 'LEVEL_TRANSITION';
+  showScreen('transition-screen');
+  showHUD(false);
 }
 
 function updateLevelTransition(dt) {
@@ -1117,50 +988,128 @@ function updateLevelTransition(dt) {
   if (levelTransitionTimer >= LEVEL_TRANSITION_DURATION) {
     loadLevel(nextLevelIndex);
     STATE = 'PLAYING';
+    showScreen(null);
+    showHUD(true);
+    renderer.domElement.requestPointerLock();
   }
 }
 
-function renderLevelTransition() {
-  const alpha = Math.min(1, levelTransitionTimer / 0.8);
-  ctx.fillStyle = `rgba(0,0,0,${alpha})`;
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-  ctx.textAlign = 'center';
-  const lines = levelTransitionText.split('\n');
-  lines.forEach((line, i) => {
-    const la = Math.max(0, Math.min(1, (levelTransitionTimer - 0.5 - i * 0.3) / 0.6));
-    ctx.fillStyle = `rgba(79,195,247,${la})`;
-    ctx.font = (i === 0 ? 'bold 18px' : '14px') + ' monospace';
-    ctx.fillText(line, CANVAS_W/2, CANVAS_H/2 - (lines.length-1)*18 + i*36);
-  });
-  if (levelTransitionTimer > 3.0) {
-    ctx.fillStyle = `rgba(150,150,150,${Math.min(1,(levelTransitionTimer-3.0)/0.5)})`;
-    ctx.font = '11px monospace';
-    ctx.fillText('continuing...', CANVAS_W/2, CANVAS_H*0.8);
+// ═══════════════════════════════════════════════════════
+// HUD
+// ═══════════════════════════════════════════════════════
+function updateHUD() {
+  const pct = Math.floor(player.tracking * 100);
+  const r = Math.floor(player.tracking * 255);
+  const b = Math.floor((1 - player.tracking) * 200);
+  const fill = document.getElementById('signal-fill');
+  fill.style.width = pct + '%';
+  fill.style.background = `rgb(${r},50,${b})`;
+
+  document.getElementById('phone-status').textContent =
+    player.hasPhone ? (player.phoneIsBurner ? 'BURNER ACTIVE' : 'PHONE ACTIVE') : '';
+
+  for (let i = 0; i < player.maxHealth; i++) {
+    document.getElementById(`hp${i}`).className = 'health-pip' + (i < player.health ? '' : ' empty');
   }
-  ctx.textAlign = 'left';
+
+  const sf = document.getElementById('stamina-fill');
+  sf.style.width = Math.floor(player.stamina * 100) + '%';
+  sf.style.background = player.stamina > 0.2 ? '#546e7a' : '#e57373';
+
+  const counts = [inventory.burner, inventory.jammer, inventory.fakeId, inventory.distraction];
+  for (let i = 0; i < 4; i++) {
+    const slot = document.getElementById(`slot${i}`);
+    slot.querySelector('.item-count').textContent = counts[i];
+    slot.className = 'inv-slot' + (i === activeSlot ? ' active' : '') + (counts[i] === 0 ? ' empty' : '');
+  }
+
+  const jamInd = document.getElementById('jammer-indicator');
+  if (jammerActive > 0) {
+    jamInd.style.display = 'block';
+    jamInd.textContent = `JAMMER: ${jammerActive.toFixed(1)}s`;
+  } else {
+    jamInd.style.display = 'none';
+  }
 }
 
-// ============================================================
-// Endings & state screens
-// ============================================================
+function updateMinimap() {
+  if (!MAP.length) return;
+  const canvas = document.getElementById('minimap-canvas');
+  const c = canvas.getContext('2d');
+  const cW = canvas.width, cH = canvas.height;
+  const cellPx = Math.min(cW / MAP_W, cH / MAP_H);
+  c.fillStyle = 'rgba(0,0,0,0.85)'; c.fillRect(0, 0, cW, cH);
+  for (let z = 0; z < MAP_H; z++) {
+    for (let x = 0; x < MAP_W; x++) {
+      c.fillStyle = MAP[z * MAP_W + x] > 0 ? '#334' : '#1a1a28';
+      c.fillRect(x * cellPx, z * cellPx, cellPx, cellPx);
+    }
+  }
+  const px = (player.x / CELL_SIZE) * cellPx;
+  const pz = (player.z / CELL_SIZE) * cellPx;
+  c.fillStyle = '#4fc3f7';
+  c.beginPath(); c.arc(px, pz, 2.5, 0, Math.PI * 2); c.fill();
+  for (const a of agents) {
+    c.fillStyle = a.aiState === 'CHASE' ? '#f44' : a.aiState === 'ALERT' ? '#fa0' : '#844';
+    const ax = (a.x / CELL_SIZE) * cellPx, az = (a.z / CELL_SIZE) * cellPx;
+    c.beginPath(); c.arc(ax, az, 2, 0, Math.PI * 2); c.fill();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// Endings
+// ═══════════════════════════════════════════════════════
 let endingType = '';
 let endingTimer = 0;
-let deadTimer = 0;
+let endingReturnEnabled = false;
 
 function enterEnding(type) {
-  endingType = type;
-  endingTimer = 0;
+  endingType = type; endingTimer = 0; endingReturnEnabled = false;
   STATE = 'ENDING';
+  showHUD(false);
+
+  const titleEl = document.getElementById('ending-title');
+  const bodyEl  = document.getElementById('ending-body');
+  const retEl   = document.getElementById('ending-return');
+  retEl.style.opacity = '0';
+  bodyEl.innerHTML = '';
+
+  if (type === 'caught') {
+    titleEl.style.color = '#e53935';
+    titleEl.textContent = 'CAUGHT';
+    bodyEl.innerHTML = `<p>In 2025, ICE deported 319,980 people.</p><p>Most had no criminal record.</p>`;
+  } else if (type === 'escaped_with_phone') {
+    titleEl.style.color = '#4fc3f7';
+    titleEl.textContent = 'You made it home.';
+    bodyEl.innerHTML = `<p>ICE purchased your location data for $0.0003.</p><p>They know where you are. They always did.</p>`;
+  } else if (type === 'escaped_no_phone') {
+    titleEl.style.color = '#81c784';
+    titleEl.textContent = 'You made it.';
+    const losses = [
+      'Without your calls.',
+      'Without your transit pass.',
+      'Without your apps, your records, your digital life.',
+      'You are safe. But the cost was everything else.',
+      '',
+      '"Privacy shouldn\'t cost this much."',
+    ];
+    bodyEl.innerHTML = losses.map((l, i) =>
+      `<p style="opacity:0;transition:opacity 0.5s;transition-delay:${0.8 + i * 0.6}s;${l.startsWith('"') ? 'color:#4fc3f7;font-weight:bold' : ''}">${l || '&nbsp;'}</p>`
+    ).join('');
+    requestAnimationFrame(() => {
+      bodyEl.querySelectorAll('p').forEach(p => { p.style.opacity = '1'; });
+    });
+  }
+
+  showScreen('ending-screen');
 }
 
-function enterDead() {
-  STATE = 'DEAD';
-  deadTimer = 0;
-}
-
-function updateDead(dt) {
-  deadTimer += dt;
-  if (deadTimer > 6.0 && (keys['Space'] || keys['Enter'] || deadTimer > 14.0)) resetGame();
+function updateEnding(dt) {
+  endingTimer += dt;
+  if (endingTimer > 5.0 && !endingReturnEnabled) {
+    endingReturnEnabled = true;
+    document.getElementById('ending-return').style.opacity = '1';
+  }
 }
 
 function resetGame() {
@@ -1171,153 +1120,46 @@ function resetGame() {
   player.phoneDropped = false;
   player.phoneIsBurner = false;
   player.invincible = 0;
-  inventory.burner = 1;
-  inventory.jammer = 0;
-  inventory.fakeId = 0;
-  inventory.distraction = 0;
-  fakeIdReady = false;
-  jammerActive = 0;
-  endingTimer = 0;
-  deadTimer = 0;
+  inventory.burner = 1; inventory.jammer = 0;
+  inventory.fakeId = 0; inventory.distraction = 0;
+  activeSlot = 0; fakeIdReady = false; jammerActive = 0;
+  endingTimer = 0; endingReturnEnabled = false;
   loadLevel(0);
   STATE = 'TITLE';
+  showScreen('title-screen');
+  showHUD(false);
+  if (document.pointerLockElement) document.exitPointerLock();
 }
 
-function renderTitle() {
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-  ctx.textAlign = 'center';
-  ctx.fillStyle = '#4fc3f7';
-  ctx.font = 'bold 36px monospace';
-  ctx.fillText('DROP YOUR PHONE', CANVAS_W/2, CANVAS_H/2 - 70);
-  ctx.fillStyle = '#e53935';
-  ctx.font = '13px monospace';
-  ctx.fillText('An expressive piece about surveillance, data brokers, and ICE deportation.', CANVAS_W/2, CANVAS_H/2 - 30);
-  ctx.fillStyle = '#888';
-  ctx.font = '11px monospace';
-  ctx.fillText('WASD / Arrow keys to move and turn  |  SHIFT to sprint  |  SPACE to drop phone  |  1-4 to use items', CANVAS_W/2, CANVAS_H/2 + 10);
-  ctx.fillStyle = '#aaa';
-  ctx.font = 'bold 13px monospace';
-  ctx.fillText('Press SPACE or ENTER to begin', CANVAS_W/2, CANVAS_H/2 + 52);
-  ctx.fillStyle = '#444';
-  ctx.font = '10px monospace';
-  ctx.fillText('"In 2025, ICE deported 319,980 people. Most had no criminal record."', CANVAS_W/2, CANVAS_H - 20);
-  ctx.textAlign = 'left';
+// ═══════════════════════════════════════════════════════
+// Screen helpers
+// ═══════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(el => el.classList.add('hidden'));
+  if (id) document.getElementById(id).classList.remove('hidden');
+}
+function showHUD(visible) {
+  document.getElementById('hud').classList.toggle('hidden', !visible);
 }
 
-const LOSS_ITEMS = [
-  'Your calls with family',
-  'Your digital transit pass',
-  'Your bank app access',
-  'Your job application status',
-  'Your prescription refill',
-  'Your child\'s school login',
-];
-
-function renderLossScreen() {
-  const alpha = Math.min(1, lossScreenTimer / 0.8);
-  ctx.fillStyle = `rgba(0,0,0,${alpha * 0.96})`;
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-  ctx.textAlign = 'center';
-  ctx.fillStyle = `rgba(255,255,255,${alpha})`;
-  ctx.font = 'bold 20px monospace';
-  ctx.fillText('You dropped the phone.', CANVAS_W/2, 60);
-  ctx.font = '13px monospace';
-  ctx.fillStyle = `rgba(180,180,180,${alpha})`;
-  ctx.fillText('What you just gave up:', CANVAS_W/2, 96);
-  LOSS_ITEMS.forEach((item, i) => {
-    const delay = 0.3 + i * 0.4;
-    const ia = Math.max(0, Math.min(1, (lossScreenTimer - delay) / 0.4)) * alpha;
-    ctx.fillStyle = `rgba(229,57,53,${ia})`;
-    ctx.font = '12px monospace';
-    ctx.fillText(`— ${item}`, CANVAS_W/2, 126 + i * 24);
-  });
-  if (lossScreenTimer > 3.5) {
-    ctx.fillStyle = `rgba(79,195,247,${Math.min(1,(lossScreenTimer-3.5)/0.5)})`;
-    ctx.font = '11px monospace';
-    ctx.fillText('A burner phone is on the ground ahead.  Press SPACE to continue.', CANVAS_W/2, CANVAS_H - 28);
-  }
-  ctx.textAlign = 'left';
+function startGame() {
+  loadLevel(0);
+  STATE = 'PLAYING';
+  showScreen(null);
+  showHUD(true);
+  renderer.domElement.requestPointerLock();
 }
 
-function renderDead() {
-  ctx.fillStyle = '#080000';
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-  const alpha = Math.min(1, deadTimer / 1.5);
-  ctx.textAlign = 'center';
-  ctx.fillStyle = `rgba(229,57,53,${alpha})`;
-  ctx.font = 'bold 32px monospace';
-  ctx.fillText('CAUGHT', CANVAS_W/2, CANVAS_H/2 - 50);
-  ctx.fillStyle = `rgba(200,200,200,${alpha})`;
-  ctx.font = '13px monospace';
-  ctx.fillText('In 2025, ICE deported 319,980 people.', CANVAS_W/2, CANVAS_H/2 + 10);
-  ctx.fillText('Most had no criminal record.', CANVAS_W/2, CANVAS_H/2 + 34);
-  if (deadTimer > 4.0) {
-    ctx.fillStyle = `rgba(130,130,130,${Math.min(1,(deadTimer-4.0)/0.5)})`;
-    ctx.font = '11px monospace';
-    ctx.fillText('Press SPACE to return to title', CANVAS_W/2, CANVAS_H - 24);
-  }
-  ctx.textAlign = 'left';
-}
-
-function renderEnding() {
-  ctx.fillStyle = '#000';
-  ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
-  const alpha = Math.min(1, endingTimer / 1.5);
-  ctx.textAlign = 'center';
-
-  if (endingType === 'caught') {
-    ctx.fillStyle = `rgba(229,57,53,${alpha})`;
-    ctx.font = 'bold 28px monospace';
-    ctx.fillText('CAUGHT', CANVAS_W/2, CANVAS_H/2 - 60);
-    ctx.fillStyle = `rgba(200,200,200,${alpha})`;
-    ctx.font = '13px monospace';
-    ctx.fillText('In 2025, ICE deported 319,980 people.', CANVAS_W/2, CANVAS_H/2);
-    ctx.fillText('Most had no criminal record.', CANVAS_W/2, CANVAS_H/2 + 24);
-  } else if (endingType === 'escaped_with_phone') {
-    ctx.fillStyle = `rgba(79,195,247,${alpha})`;
-    ctx.font = 'bold 24px monospace';
-    ctx.fillText('You made it home.', CANVAS_W/2, CANVAS_H/2 - 60);
-    ctx.fillStyle = `rgba(200,200,200,${alpha})`;
-    ctx.font = '13px monospace';
-    ctx.fillText('ICE purchased your location data for $0.0003.', CANVAS_W/2, CANVAS_H/2);
-    ctx.fillText('They know where you are. They always did.', CANVAS_W/2, CANVAS_H/2 + 24);
-  } else if (endingType === 'escaped_no_phone') {
-    ctx.fillStyle = `rgba(140,200,140,${alpha})`;
-    ctx.font = 'bold 24px monospace';
-    ctx.fillText('You made it.', CANVAS_W/2, CANVAS_H/2 - 90);
-    const lines = [
-      'Without your calls. Without your card.',
-      'Without your apps, your records, your digital life.',
-      'You are safe. But the cost was everything else.',
-      '',
-      '"Privacy shouldn\'t cost this much."',
-    ];
-    lines.forEach((line, i) => {
-      const la = Math.max(0, Math.min(1, (endingTimer - 1.5 - i*0.7) / 0.5));
-      ctx.fillStyle = line.startsWith('"') ? `rgba(79,195,247,${la})` : `rgba(200,200,200,${la})`;
-      ctx.font = line.startsWith('"') ? `bold 14px monospace` : `13px monospace`;
-      ctx.fillText(line, CANVAS_W/2, CANVAS_H/2 - 40 + i * 28);
-    });
-  }
-
-  if (endingTimer > 5.0) {
-    ctx.fillStyle = `rgba(130,130,130,${Math.min(1,(endingTimer-5.0)/0.5)})`;
-    ctx.font = '11px monospace';
-    ctx.fillText('Press SPACE to return to title', CANVAS_W/2, CANVAS_H - 20);
-  }
-  ctx.textAlign = 'left';
-}
-
-// ============================================================
-// Entry point
-// ============================================================
+// ═══════════════════════════════════════════════════════
+// Init
+// ═══════════════════════════════════════════════════════
 function initGame() {
   buildTextures();
-  buildAgentSprites();
-  buildItemIcons();
+  buildAgentMaterials();
   loadLevel(0);
   STATE = 'TITLE';
+  showScreen('title-screen');
+  showHUD(false);
   requestAnimationFrame(ts => { lastTime = ts; requestAnimationFrame(gameLoop); });
 }
 
