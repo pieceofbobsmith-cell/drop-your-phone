@@ -1,10 +1,17 @@
 // popup.js
 document.addEventListener('DOMContentLoaded', () => {
-  const toggle = document.getElementById('blockingToggle');
-  const countEl = document.getElementById('blockedCount');
-  const playBtn = document.getElementById('playBtn');
+  const toggle      = document.getElementById('blockingToggle');
+  const countEl     = document.getElementById('blockedCount');
+  const playBtn     = document.getElementById('playBtn');
+  const firstNameEl = document.getElementById('ooFirstName');
+  const lastNameEl  = document.getElementById('ooLastName');
+  const emailEl     = document.getElementById('ooEmail');
+  const cityEl      = document.getElementById('ooCity');
+  const stateEl     = document.getElementById('ooState');
+  const startBtn    = document.getElementById('startOptoutBtn');
+  const brokerList  = document.getElementById('brokerList');
 
-  // Load current state from background
+  // ── Tracker blocking ──────────────────────────────────────────────
   chrome.runtime.sendMessage({ type: 'GET_STATE' }, (response) => {
     if (response) {
       toggle.checked = response.blockingEnabled !== false;
@@ -20,4 +27,63 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.tabs.create({ url: chrome.runtime.getURL('game.html') });
     window.close();
   });
+
+  // ── Opt-out: restore saved profile and previous statuses ─────────
+  chrome.storage.local.get(['optoutProfile', 'optoutStatus'], ({ optoutProfile, optoutStatus }) => {
+    if (optoutProfile) {
+      firstNameEl.value = optoutProfile.firstName || '';
+      lastNameEl.value  = optoutProfile.lastName  || '';
+      emailEl.value     = optoutProfile.email     || '';
+      cityEl.value      = optoutProfile.city      || '';
+      stateEl.value     = optoutProfile.state     || '';
+    }
+    if (optoutStatus) {
+      renderBrokerList(optoutStatus);
+      startBtn.textContent = '\u2713 OPT-OUT SENT';
+    }
+  });
+
+  // ── Start opt-out ─────────────────────────────────────────────────
+  startBtn.addEventListener('click', () => {
+    const profile = {
+      firstName: firstNameEl.value.trim(),
+      lastName:  lastNameEl.value.trim(),
+      email:     emailEl.value.trim(),
+      city:      cityEl.value.trim(),
+      state:     stateEl.value.trim().toUpperCase(),
+    };
+    if (!profile.firstName || !profile.lastName) {
+      firstNameEl.focus();
+      return;
+    }
+    startBtn.disabled = true;
+    startBtn.textContent = '\u21bb OPENING TABS\u2026';
+    chrome.runtime.sendMessage({ type: 'OPT_OUT_START', profile }, () => {
+      setTimeout(() => {
+        chrome.storage.local.get(['optoutStatus'], ({ optoutStatus }) => {
+          if (optoutStatus) renderBrokerList(optoutStatus);
+          startBtn.textContent = '\u2713 OPT-OUT SENT';
+        });
+      }, 1000);
+    });
+  });
+
+  // ── Render broker status list ─────────────────────────────────────
+  function renderBrokerList(statuses) {
+    brokerList.classList.remove('hidden');
+    brokerList.innerHTML = BROKERS.map(b => {
+      const status = statuses[b.id] || 'idle';
+      const dotClass    = 'dot-' + status;
+      const statusClass = 'status-' + status;
+      const statusText  = status === 'submitted' ? 'sent'
+                        : status === 'manual'    ? 'manual'
+                        : status === 'error'     ? 'error'
+                        :                          '\u2013';
+      return '<div class="broker-item">'
+        + '<span class="broker-dot ' + dotClass + '"></span>'
+        + '<span class="broker-name">' + b.name + '</span>'
+        + '<span class="broker-status-text ' + statusClass + '">' + statusText + '</span>'
+        + '</div>';
+    }).join('');
+  }
 });
