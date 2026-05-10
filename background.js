@@ -1,18 +1,12 @@
 // background.js — service worker
-// Tracks how many cookie banners have been blocked this session.
-// Relays SHOW_TOAST messages back to content scripts.
-// Updates the extension badge with the running count.
+importScripts('brokers.js');
 
 let blockedCount = 0;
 let blockingEnabled = true;
 
-// INVARIANT: every mutation to blockedCount/blockingEnabled must be
-// immediately followed by chrome.storage.local.set, because the SW
-// can be killed at any time and in-memory state will not survive.
-
 // Restore persisted state on startup
 chrome.storage.local.get(['blockingEnabled', 'blockedCount'], (result) => {
-  blockingEnabled = result.blockingEnabled !== false; // default true
+  blockingEnabled = result.blockingEnabled !== false;
   blockedCount = result.blockedCount || 0;
   updateBadge();
 });
@@ -27,7 +21,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     blockedCount++;
     chrome.storage.local.set({ blockedCount });
     updateBadge();
-    // Tell content script on same tab to show the toast
     if (sender.tab && sender.tab.id) {
       chrome.tabs.sendMessage(sender.tab.id, { type: 'SHOW_TOAST' }).catch(() => {});
     }
@@ -51,8 +44,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ success: true });
   }
 
-  return true; // keep message channel open for async sendResponse
+  if (message.type === 'OPT_OUT_START') {
+    startOptout(message.profile);
+    sendResponse({ success: true });
+  }
+
+  return true;
 });
+
+async function startOptout(profile) {
+  await chrome.storage.local.set({ optoutProfile: profile });
+
+  const statuses = {};
+  for (const broker of BROKERS) {
+    // Brokers with selectors get auto-filled by optout.js content script.
+    // Mark them 'submitted' optimistically; manual ones stay 'manual'.
+    statuses[broker.id] = broker.selectors ? 'submitted' : 'manual';
+    chrome.tabs.create({ url: broker.url, active: false });
+  }
+
+  await chrome.storage.local.set({ optoutStatus: statuses });
+}
 
 function updateBadge() {
   const text = blockedCount > 0 ? String(blockedCount) : '';
