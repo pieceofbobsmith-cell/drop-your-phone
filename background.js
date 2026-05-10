@@ -1,5 +1,4 @@
 // background.js — service worker
-importScripts('brokers.js');
 
 let blockedCount = 0;
 let blockingEnabled = true;
@@ -44,27 +43,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ success: true });
   }
 
-  if (message.type === 'OPT_OUT_START') {
-    startOptout(message.profile);
-    sendResponse({ success: true });
-  }
-
   return true;
 });
-
-async function startOptout(profile) {
-  await chrome.storage.local.set({ optoutProfile: profile });
-
-  const statuses = {};
-  for (const broker of BROKERS) {
-    // Brokers with selectors get auto-filled by optout.js content script.
-    // Mark them 'submitted' optimistically; manual ones stay 'manual'.
-    statuses[broker.id] = broker.selectors ? 'submitted' : 'manual';
-    chrome.tabs.create({ url: broker.url, active: false });
-  }
-
-  await chrome.storage.local.set({ optoutStatus: statuses });
-}
 
 function updateBadge() {
   const text = blockedCount > 0 ? String(blockedCount) : '';

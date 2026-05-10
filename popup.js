@@ -43,6 +43,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // ── Auto-save profile as user types ──────────────────────────────
+  let saveTimer;
+  const profileFields = [firstNameEl, lastNameEl, emailEl, cityEl, stateEl];
+  profileFields.forEach(el => {
+    el.addEventListener('input', () => {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        chrome.storage.local.set({ optoutProfile: {
+          firstName: firstNameEl.value.trim(),
+          lastName:  lastNameEl.value.trim(),
+          email:     emailEl.value.trim(),
+          city:      cityEl.value.trim(),
+          state:     stateEl.value.trim().toUpperCase(),
+        }});
+      }, 400);
+    });
+  });
+
   // ── Start opt-out ─────────────────────────────────────────────────
   startBtn.addEventListener('click', () => {
     const profile = {
@@ -58,14 +76,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     startBtn.disabled = true;
     startBtn.textContent = '\u21bb OPENING TABS\u2026';
-    chrome.runtime.sendMessage({ type: 'OPT_OUT_START', profile }, () => {
-      setTimeout(() => {
-        chrome.storage.local.get(['optoutStatus'], ({ optoutStatus }) => {
-          if (optoutStatus) renderBrokerList(optoutStatus);
-          startBtn.textContent = '\u2713 OPT-OUT SENT';
-        });
-      }, 1000);
-    });
+
+    // Save profile and build statuses
+    const statuses = {};
+    BROKERS.forEach(b => { statuses[b.id] = b.selectors ? 'submitted' : 'manual'; });
+    chrome.storage.local.set({ optoutProfile: profile, optoutStatus: statuses });
+
+    // Open all tabs directly from popup (reliable — no service worker roundtrip)
+    BROKERS.forEach(b => chrome.tabs.create({ url: b.url, active: false }));
+
+    renderBrokerList(statuses);
+    startBtn.textContent = '\u2713 OPT-OUT SENT';
   });
 
   // ── Render broker status list ─────────────────────────────────────
