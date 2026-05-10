@@ -82,6 +82,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Save profile and build statuses
     const statuses = {};
     BROKERS.forEach(b => { statuses[b.id] = b.selectors ? 'submitted' : 'manual'; });
+    // Spokeo needs manual URL step even though it has an email selector
+    statuses['spokeo'] = 'manual';
+    // Radaris has no form to fill
+    statuses['radaris'] = 'manual';
     chrome.storage.local.set({ optoutProfile: profile, optoutStatus: statuses });
 
     // Open all tabs directly from popup (reliable — no service worker roundtrip)

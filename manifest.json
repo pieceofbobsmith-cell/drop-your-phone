@@ -16,10 +16,23 @@
     },
     {
       "matches": [
+        "https://www.spokeo.com/optout*",
         "https://www.beenverified.com/app/optout/*",
         "https://www.peoplelooker.com/app/optout/*",
+        "https://www.truthfinder.com/opt-out/*",
+        "https://www.instantcheckmate.com/opt-out/*",
+        "https://www.intelius.com/opt-out/*",
+        "https://www.peoplefinder.com/people_removal/*",
         "https://www.fastpeoplesearch.com/removal*",
+        "https://isapps.acxiom.com/optout/*",
+        "https://www.mylife.com/ccpa/*",
         "https://nuwber.com/removal/*",
+        "https://checkpeople.com/opt-out*",
+        "https://www.ussearch.com/opt-out/*",
+        "https://www.peoplefinders.com/opt-out*",
+        "https://www.zabasearch.com/block_records/*",
+        "https://www.publicrecordsnow.com/static/view/optout*",
+        "https://www.usphonebook.com/opt-out*",
         "https://thatsthem.com/optout*"
       ],
       "js": ["brokers.js", "optout.js"],
