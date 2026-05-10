@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const cityEl      = document.getElementById('ooCity');
   const stateEl     = document.getElementById('ooState');
   const startBtn    = document.getElementById('startOptoutBtn');
+  const redoBtn     = document.getElementById('redoOptoutBtn');
   const brokerList  = document.getElementById('brokerList');
 
   // ── Tracker blocking ──────────────────────────────────────────────
@@ -40,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (optoutStatus) {
       renderBrokerList(optoutStatus);
       startBtn.textContent = '\u2713 OPT-OUT SENT';
+      redoBtn.classList.remove('hidden');
     }
   });
 
@@ -87,6 +89,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     renderBrokerList(statuses);
     startBtn.textContent = '\u2713 OPT-OUT SENT';
+    redoBtn.classList.remove('hidden');
+  });
+
+  // ── Redo opt-out ──────────────────────────────────────────────────
+  redoBtn.addEventListener('click', () => {
+    chrome.storage.local.remove(['optoutStatus']);
+    brokerList.classList.add('hidden');
+    brokerList.innerHTML = '';
+    startBtn.disabled = false;
+    startBtn.textContent = '\uD83D\uDEAB START OPT-OUT';
+    redoBtn.classList.add('hidden');
+    firstNameEl.focus();
   });
 
   // ── Render broker status list ─────────────────────────────────────
