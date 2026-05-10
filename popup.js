@@ -69,6 +69,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ── Render broker status list ─────────────────────────────────────
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
   function renderBrokerList(statuses) {
     brokerList.classList.remove('hidden');
     brokerList.innerHTML = BROKERS.map(b => {
@@ -80,9 +84,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         : status === 'error'     ? 'error'
                         :                          '\u2013';
       return '<div class="broker-item">'
-        + '<span class="broker-dot ' + dotClass + '"></span>'
-        + '<span class="broker-name">' + b.name + '</span>'
-        + '<span class="broker-status-text ' + statusClass + '">' + statusText + '</span>'
+        + '<span class="broker-dot ' + esc(dotClass) + '"></span>'
+        + '<span class="broker-name">' + esc(b.name) + '</span>'
+        + '<span class="broker-status-text ' + esc(statusClass) + '">' + esc(statusText) + '</span>'
         + '</div>';
     }).join('');
   }
