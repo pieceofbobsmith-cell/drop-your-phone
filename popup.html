@@ -31,6 +31,27 @@
     data brokers, and ICE deportation.
   </div>
 
+  <div class="divider"></div>
+
+  <div class="optout-section">
+    <div class="optout-label">DATA BROKER OPT-OUT</div>
+    <div class="optout-desc">Enter your info to auto-submit opt-out requests to 20 data brokers.</div>
+
+    <div class="optout-form">
+      <input class="optout-input" id="ooFirstName" type="text"  placeholder="First name" autocomplete="given-name">
+      <input class="optout-input" id="ooLastName"  type="text"  placeholder="Last name"  autocomplete="family-name">
+      <input class="optout-input" id="ooEmail"     type="email" placeholder="Email"      autocomplete="email">
+      <div class="optout-row">
+        <input class="optout-input" id="ooCity"  type="text" placeholder="City"  autocomplete="address-level2">
+        <input class="optout-input" id="ooState" type="text" placeholder="State (2-letter)" autocomplete="address-level1" maxlength="2">
+      </div>
+      <button id="startOptoutBtn">&#128683; START OPT-OUT</button>
+    </div>
+
+    <div id="brokerList" class="broker-list hidden"></div>
+  </div>
+
+  <script src="brokers.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
