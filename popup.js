@@ -83,11 +83,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         : status === 'manual'    ? 'manual'
                         : status === 'error'     ? 'error'
                         :                          '\u2013';
-      return '<div class="broker-item">'
+      return '<div class="broker-item" data-id="' + esc(b.id) + '">'
         + '<span class="broker-dot ' + esc(dotClass) + '"></span>'
         + '<span class="broker-name">' + esc(b.name) + '</span>'
         + '<span class="broker-status-text ' + esc(statusClass) + '">' + esc(statusText) + '</span>'
+        + '</div>'
+        + '<div class="broker-instructions hidden" data-for="' + esc(b.id) + '">'
+        + esc(b.instructions || '')
         + '</div>';
     }).join('');
+
+    // Toggle instructions on row click
+    brokerList.querySelectorAll('.broker-item').forEach(row => {
+      row.addEventListener('click', () => {
+        const panel = brokerList.querySelector('.broker-instructions[data-for="' + row.dataset.id + '"]');
+        if (panel) panel.classList.toggle('hidden');
+      });
+    });
   }
 });
