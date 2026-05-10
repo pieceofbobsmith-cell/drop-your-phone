@@ -13,6 +13,17 @@
       "matches": ["<all_urls>"],
       "js": ["content.js"],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.beenverified.com/app/optout/*",
+        "https://www.peoplelooker.com/app/optout/*",
+        "https://www.fastpeoplesearch.com/removal*",
+        "https://nuwber.com/removal/*",
+        "https://thatsthem.com/optout*"
+      ],
+      "js": ["brokers.js", "optout.js"],
+      "run_at": "document_idle"
     }
   ],
   "action": {
