@@ -14,17 +14,17 @@
     /* Title */
     #title-screen { background: #050a12; }
     #title-text { font-size: 72px; letter-spacing: 0.3em; color: #e0e0e0; font-weight: bold; opacity: 0; transition: opacity 1s; text-indent: 0.3em; }
-    #title-subtitle { color: #555; font-size: 13px; letter-spacing: 0.08em; line-height: 2; text-align: center; margin-top: 24px; opacity: 0; transition: opacity 1.5s; }
-    #title-line { width: 128px; height: 1px; background: #222; margin: 20px auto 0; opacity: 0; transform: scaleX(0); transition: opacity 0.8s, transform 1.5s; transform-origin: center; }
-    #title-prompt { color: rgba(255,255,255,0.18); font-size: 10px; letter-spacing: 0.3em; margin-top: 48px; opacity: 0; transition: opacity 1s; }
+    #title-subtitle { color: #aaa; font-size: 13px; letter-spacing: 0.08em; line-height: 2; text-align: center; margin-top: 24px; opacity: 0; transition: opacity 1.5s; }
+    #title-line { width: 128px; height: 1px; background: #444; margin: 20px auto 0; opacity: 0; transform: scaleX(0); transition: opacity 0.8s, transform 1.5s; transform-origin: center; }
+    #title-prompt { color: rgba(255,255,255,0.6); font-size: 10px; letter-spacing: 0.3em; margin-top: 48px; opacity: 0; transition: opacity 1s; }
 
     /* Intro */
     #intro-screen { background: #050a12; text-align: center; padding: 40px; }
     #intro-line1, #intro-line2, #intro-line3, #intro-prompt { opacity: 0; transition: opacity 1s; margin: 8px 0; }
-    #intro-line1 { color: #ccc; font-size: 15px; letter-spacing: 0.08em; line-height: 2; }
-    #intro-line2 { color: #aa3322; font-size: 15px; letter-spacing: 0.08em; line-height: 2; }
-    #intro-line3 { color: #888; font-size: 15px; letter-spacing: 0.08em; line-height: 2; }
-    #intro-prompt { color: rgba(255,255,255,0.18); font-size: 10px; letter-spacing: 0.3em; margin-top: 60px; }
+    #intro-line1 { color: #eee; font-size: 15px; letter-spacing: 0.08em; line-height: 2; }
+    #intro-line2 { color: #cc4433; font-size: 15px; letter-spacing: 0.08em; line-height: 2; }
+    #intro-line3 { color: #bbb; font-size: 15px; letter-spacing: 0.08em; line-height: 2; }
+    #intro-prompt { color: rgba(255,255,255,0.6); font-size: 10px; letter-spacing: 0.3em; margin-top: 60px; }
 
     /* HUD */
     #hud { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
@@ -34,7 +34,7 @@
 
     #signal-wrap { position:absolute; top:16px; left:50%; transform:translateX(-50%); width:240px; }
     #signal-header { display:flex; justify-content:space-between; margin-bottom:4px; }
-    #signal-label, #signal-value { color:rgba(255,255,255,0.28); font-size:9px; letter-spacing:0.2em; }
+    #signal-label, #signal-value { color:rgba(255,255,255,0.75); font-size:9px; letter-spacing:0.2em; }
     #signal-track { height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden; }
     #signal-fill { height:100%; border-radius:2px; transition:width 0.2s, background 0.3s; width:0%; background:linear-gradient(90deg,#2a1808,#3a2010); }
     #ice-warning { text-align:center; font-size:8px; letter-spacing:0.2em; margin-top:4px; height:12px; color:rgba(200,50,50,0); transition:color 0.3s; }
@@ -46,15 +46,15 @@
 
     #phone-wrap { position:absolute; top:16px; right:16px; background:rgba(0,0,0,0.55); border:1px solid rgba(255,255,255,0.06); border-radius:4px; padding:8px 12px; text-align:right; }
     #phone-row { display:flex; align-items:center; gap:8px; justify-content:flex-end; }
-    #phone-label { color:rgba(255,255,255,0.28); font-size:9px; letter-spacing:0.1em; }
-    #phone-dot { width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.1); transition:background 0.4s; }
-    #phone-hint { color:rgba(255,255,255,0.1); font-size:8px; margin-top:3px; }
+    #phone-label { color:rgba(255,255,255,0.8); font-size:9px; letter-spacing:0.1em; }
+    #phone-dot { width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.35); transition:background 0.4s; }
+    #phone-hint { color:rgba(255,255,255,0.45); font-size:8px; margin-top:3px; }
 
     #objective { position:absolute; bottom:56px; left:50%; transform:translateX(-50%); text-align:center; }
-    #obj-next { color:rgba(255,255,255,0.13); font-size:8px; letter-spacing:0.3em; margin-bottom:2px; }
-    #obj-label { color:rgba(255,255,255,0.7); font-size:12px; letter-spacing:0.1em; }
-    #obj-desc { color:rgba(255,255,255,0.22); font-size:9px; margin-top:2px; }
-    #obj-need-phone { color:rgba(200,50,50,0.65); font-size:8px; margin-top:2px; }
+    #obj-next { color:rgba(255,255,255,0.5); font-size:8px; letter-spacing:0.3em; margin-bottom:2px; }
+    #obj-label { color:rgba(255,255,255,0.95); font-size:12px; letter-spacing:0.1em; }
+    #obj-desc { color:rgba(255,255,255,0.65); font-size:9px; margin-top:2px; }
+    #obj-need-phone { color:rgba(220,80,60,0.9); font-size:8px; margin-top:2px; }
 
     #msg-flash { position:absolute; top:42%; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.72); border:1px solid rgba(255,255,255,0.09); border-radius:4px; padding:10px 20px; opacity:0; transition:opacity 0.3s; white-space:nowrap; }
     #msg-text { color:rgba(255,255,255,0.72); font-size:12px; }
@@ -63,20 +63,20 @@
     #minimap-canvas { display:block; }
     #minimap-label { position:absolute; top:4px; left:6px; font-size:7px; color:rgba(255,255,255,0.13); letter-spacing:0.2em; }
 
-    #controls { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); color:rgba(255,255,255,0.09); font-size:8px; letter-spacing:0.25em; white-space:nowrap; }
+    #controls { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); color:rgba(255,255,255,0.45); font-size:8px; letter-spacing:0.25em; white-space:nowrap; }
     #vignette { position:absolute; inset:0; pointer-events:none; }
     #ice-border { position:absolute; inset:0; pointer-events:none; border:2px solid rgba(180,0,0,0); transition:border-color 0.5s; }
 
     /* End screen */
     #end-screen { background:#000; text-align:center; padding:40px; }
     #end-lines { max-width:480px; }
-    .end-line { font-size:14px; letter-spacing:0.08em; line-height:2.2; color:rgba(255,255,255,0.68); opacity:0; transition:opacity 1.2s; margin:2px 0; display:block; }
+    .end-line { font-size:14px; letter-spacing:0.08em; line-height:2.2; color:rgba(255,255,255,0.92); opacity:0; transition:opacity 1.2s; margin:2px 0; display:block; }
     #end-footer { position:absolute; bottom:48px; max-width:420px; text-align:center; opacity:0; transition:opacity 1.5s; padding:0 24px; }
-    #end-footer-rule { width:64px; height:1px; background:rgba(255,255,255,0.08); margin:0 auto 20px; }
-    #end-footer p { color:rgba(255,255,255,0.22); font-size:10px; letter-spacing:0.08em; line-height:2; }
+    #end-footer-rule { width:64px; height:1px; background:rgba(255,255,255,0.2); margin:0 auto 20px; }
+    #end-footer p { color:rgba(255,255,255,0.6); font-size:10px; letter-spacing:0.08em; line-height:2; }
     #end-restart { position:absolute; bottom:130px; opacity:0; transition:opacity 1s; pointer-events:auto; }
-    #end-restart-btn { background:none; border:none; color:rgba(255,255,255,0.28); font-family:'Courier New',monospace; font-size:10px; letter-spacing:0.3em; cursor:pointer; }
-    #end-restart-btn:hover { color:rgba(255,255,255,0.6); }
+    #end-restart-btn { background:none; border:none; color:rgba(255,255,255,0.7); font-family:'Courier New',monospace; font-size:10px; letter-spacing:0.3em; cursor:pointer; }
+    #end-restart-btn:hover { color:rgba(255,255,255,0.95); }
   </style>
 </head>
 <body>
