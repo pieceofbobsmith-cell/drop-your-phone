@@ -34,8 +34,20 @@
   <div class="divider"></div>
 
   <div class="optout-section">
-    <div class="optout-label">DATA BROKER OPT-OUT</div>
-    <div class="optout-desc">Enter your info to auto-submit opt-out requests to 20 data brokers.</div>
+
+    <div class="protest-manifesto">
+      <div class="protest-headline">THEY SOLD YOU.</div>
+      <div class="protest-stat">
+        <span class="protest-num" id="protestBrokerCount">107</span> data brokers are selling your name,<br>
+        address, relatives, and real&#8209;time location.<br>
+        ICE is one of their paying customers.
+      </div>
+      <div class="protest-rule"></div>
+      <div class="protest-call">
+        This is legal. You can fight back.<br>
+        Enter your info — we erase you from all of them.
+      </div>
+    </div>
 
     <div class="optout-form">
       <input class="optout-input" id="ooFirstName" type="text"  placeholder="First name" autocomplete="given-name">
@@ -43,11 +55,13 @@
       <input class="optout-input" id="ooEmail"     type="email" placeholder="Email"      autocomplete="email">
       <div class="optout-row">
         <input class="optout-input" id="ooCity"  type="text" placeholder="City"  autocomplete="address-level2">
-        <input class="optout-input" id="ooState" type="text" placeholder="State (2-letter)" autocomplete="address-level1" maxlength="2">
+        <input class="optout-input" id="ooState" type="text" placeholder="State" autocomplete="address-level1" maxlength="2">
       </div>
-      <button id="startOptoutBtn">&#128683; START OPT-OUT</button>
-      <button id="redoOptoutBtn" class="hidden">&#8635; SEARCH DIFFERENT INFO</button>
+      <button id="startOptoutBtn">&#9889; ERASE ME FROM ALL OF THEM</button>
+      <button id="redoOptoutBtn" class="hidden">&#8635; ERASE DIFFERENT PERSON</button>
     </div>
+
+    <div id="erasedMsg" class="erased-message hidden"></div>
 
     <div id="brokerList" class="broker-list hidden"></div>
   </div>

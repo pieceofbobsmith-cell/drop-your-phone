@@ -11,6 +11,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const startBtn    = document.getElementById('startOptoutBtn');
   const redoBtn     = document.getElementById('redoOptoutBtn');
   const brokerList  = document.getElementById('brokerList');
+  const erasedMsg   = document.getElementById('erasedMsg');
+
+  // Show real broker counts in the manifesto
+  const autoCount   = BROKERS.filter(b => !b.manual).length;
+  const manualCount = BROKERS.filter(b => b.manual).length;
+  const totalCount  = BROKERS.length;
+  const countEl2    = document.getElementById('protestBrokerCount');
+  if (countEl2) countEl2.textContent = totalCount;
 
   // ── Tracker blocking ──────────────────────────────────────────────
   chrome.runtime.sendMessage({ type: 'GET_STATE' }, (response) => {
@@ -40,15 +48,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (optoutStatus) {
       renderBrokerList(optoutStatus);
-      startBtn.textContent = '\u2713 OPT-OUT SENT';
+      startBtn.disabled = true;
+      startBtn.textContent = '\u2713 ERASED FROM ' + autoCount + ' DATABASES';
+      showErasedMessage(autoCount);
       redoBtn.classList.remove('hidden');
     }
   });
 
   // ── Auto-save profile as user types ──────────────────────────────
   let saveTimer;
-  const profileFields = [firstNameEl, lastNameEl, emailEl, cityEl, stateEl];
-  profileFields.forEach(el => {
+  [firstNameEl, lastNameEl, emailEl, cityEl, stateEl].forEach(el => {
     el.addEventListener('input', () => {
       clearTimeout(saveTimer);
       saveTimer = setTimeout(() => {
@@ -77,22 +86,20 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     startBtn.disabled = true;
-    startBtn.textContent = '\u21bb OPENING TABS\u2026';
 
-    // Save profile and build statuses
+    // Build statuses: auto brokers → 'sent', manual → 'idle'
     const statuses = {};
-    BROKERS.forEach(b => { statuses[b.id] = b.selectors ? 'submitted' : 'manual'; });
-    // Spokeo needs manual URL step even though it has an email selector
-    statuses['spokeo'] = 'manual';
-    // Radaris has no form to fill
-    statuses['radaris'] = 'manual';
+    BROKERS.forEach(b => { statuses[b.id] = b.manual ? 'idle' : 'sent'; });
     chrome.storage.local.set({ optoutProfile: profile, optoutStatus: statuses });
 
-    // Open all tabs directly from popup (reliable — no service worker roundtrip)
-    BROKERS.forEach(b => chrome.tabs.create({ url: b.url, active: false }));
+    // Queue all auto-fill brokers — background.js opens them one at a time,
+    // each fills+submits+closes before the next one opens
+    const autoUrls = BROKERS.filter(b => !b.manual).map(b => b.url);
+    chrome.runtime.sendMessage({ type: 'START_OPTOUT_QUEUE', urls: autoUrls });
 
     renderBrokerList(statuses);
-    startBtn.textContent = '\u2713 OPT-OUT SENT';
+    startBtn.textContent = '\u2713 ERASED FROM ' + autoCount + ' DATABASES';
+    showErasedMessage(autoCount);
     redoBtn.classList.remove('hidden');
   });
 
@@ -101,43 +108,97 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.local.remove(['optoutStatus']);
     brokerList.classList.add('hidden');
     brokerList.innerHTML = '';
+    erasedMsg.classList.add('hidden');
+    erasedMsg.innerHTML = '';
     startBtn.disabled = false;
-    startBtn.textContent = '\uD83D\uDEAB START OPT-OUT';
+    startBtn.textContent = '\u26A1 ERASE ME FROM ALL OF THEM';
     redoBtn.classList.add('hidden');
     firstNameEl.focus();
   });
 
-  // ── Render broker status list ─────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────
   function esc(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  function showErasedMessage(n) {
+    erasedMsg.classList.remove('hidden');
+    erasedMsg.innerHTML =
+      '<div class="erased-headline">\u2713 ' + n + ' OPT-OUTS SENT.</div>'
+      + '<div class="erased-body">They commodified your existence.'
+      + ' They sold your location, your relatives, your past.<br>'
+      + ' You just took yourself back from all of them.</div>';
+  }
+
+  // ── Render broker list (two sections) ────────────────────────────
   function renderBrokerList(statuses) {
     brokerList.classList.remove('hidden');
-    brokerList.innerHTML = BROKERS.map(b => {
-      const status = statuses[b.id] || 'idle';
-      const dotClass    = 'dot-' + status;
-      const statusClass = 'status-' + status;
-      const statusText  = status === 'submitted' ? 'sent'
-                        : status === 'manual'    ? 'manual'
-                        : status === 'error'     ? 'error'
-                        :                          '\u2013';
-      return '<div class="broker-item" data-id="' + esc(b.id) + '">'
-        + '<span class="broker-dot ' + esc(dotClass) + '"></span>'
-        + '<span class="broker-name">' + esc(b.name) + '</span>'
-        + '<span class="broker-status-text ' + esc(statusClass) + '">' + esc(statusText) + '</span>'
+
+    const manualBrokers = BROKERS.filter(b => b.manual);
+    const autoBrokers   = BROKERS.filter(b => !b.manual);
+
+    // ── MANUAL section ──
+    let html = '<div class="section-header section-manual">'
+      + '\u26A0 ' + manualBrokers.length + ' SITES STILL HAVE YOUR DATA \u2014 FINISH THESE'
+      + '</div>';
+
+    manualBrokers.forEach(b => {
+      const opened = statuses[b.id] === 'opened';
+      html += '<div class="broker-row-manual" data-id="' + esc(b.id) + '" data-url="' + esc(b.url) + '">'
+        + '<span class="broker-name-manual">' + esc(b.name) + '</span>'
+        + '<button class="open-btn' + (opened ? ' open-btn-done' : '') + '" data-id="' + esc(b.id) + '" data-url="' + esc(b.url) + '">'
+          + (opened ? '\u2713 opened' : 'Open \u2192')
+        + '</button>'
         + '</div>'
-        + '<div class="broker-instructions hidden" data-for="' + esc(b.id) + '">'
+        + '<div class="broker-instructions-manual">'
         + esc(b.instructions || '')
         + '</div>';
-    }).join('');
+    });
 
-    // Toggle instructions on row click
-    brokerList.querySelectorAll('.broker-item').forEach(row => {
-      row.addEventListener('click', () => {
-        const panel = brokerList.querySelector('.broker-instructions[data-for="' + row.dataset.id + '"]');
-        if (panel) panel.classList.toggle('hidden');
+    // ── AUTO section ──
+    const autoCount = autoBrokers.length;
+    html += '<div class="section-header section-auto" id="autoSectionHeader">'
+      + '\u2713 ERASED FROM ' + autoBrokers.length + ' DATABASES '
+      + '<span class="toggle-auto" id="toggleAutoBtn">see list \u25be</span>'
+      + '</div>';
+
+    html += '<div class="auto-broker-list hidden" id="autoBrokerList">';
+    autoBrokers.forEach(b => {
+      html += '<div class="broker-row-auto">'
+        + '<span class="broker-name-auto">' + esc(b.name) + '</span>'
+        + '<span class="broker-badge-sent">sent</span>'
+        + '</div>';
+    });
+    html += '</div>';
+
+    brokerList.innerHTML = html;
+
+    // Open-button click handlers for manual brokers
+    brokerList.querySelectorAll('.open-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.classList.contains('open-btn-done')) return;
+        chrome.tabs.create({ url: btn.dataset.url, active: true });
+        btn.textContent = '\u2713 opened';
+        btn.classList.add('open-btn-done');
+        chrome.storage.local.get(['optoutStatus'], ({ optoutStatus }) => {
+          if (optoutStatus) {
+            optoutStatus[btn.dataset.id] = 'opened';
+            chrome.storage.local.set({ optoutStatus });
+          }
+        });
       });
     });
+
+    // Toggle auto list
+    const toggleBtn = document.getElementById('toggleAutoBtn');
+    const autoList  = document.getElementById('autoBrokerList');
+    if (toggleBtn && autoList) {
+      toggleBtn.addEventListener('click', () => {
+        autoList.classList.toggle('hidden');
+        toggleBtn.textContent = autoList.classList.contains('hidden')
+          ? 'show list \u25be'
+          : 'hide list \u25b4';
+      });
+    }
   }
 });

@@ -103,24 +103,51 @@ input:checked + .slider:before { background: #4fc3f7; transform: translateX(18px
   text-align: center;
 }
 
-/* === OPT-OUT SECTION === */
+/* === OPT-OUT / PROTEST SECTION === */
 .optout-section {
   padding-bottom: 8px;
 }
 
-.optout-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: #4fc3f7;
-  margin-bottom: 4px;
+/* ── Protest manifesto ───────────────────────────────────────────── */
+.protest-manifesto {
+  background: #120000;
+  border-left: 3px solid #cc2200;
+  padding: 10px 10px 8px 10px;
+  margin-bottom: 8px;
 }
 
-.optout-desc {
+.protest-headline {
+  font-size: 22px;
+  font-weight: 900;
+  color: #ff2200;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  margin-bottom: 7px;
+}
+
+.protest-stat {
   font-size: 10px;
-  color: #444;
-  margin-bottom: 8px;
-  line-height: 1.4;
+  color: #cc8888;
+  line-height: 1.6;
+  margin-bottom: 7px;
+}
+
+.protest-num {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ff4422;
+}
+
+.protest-rule {
+  height: 1px;
+  background: #3a0a00;
+  margin: 7px 0;
+}
+
+.protest-call {
+  font-size: 10px;
+  color: #ff8866;
+  line-height: 1.6;
 }
 
 .optout-input {
@@ -156,27 +183,55 @@ input:checked + .slider:before { background: #4fc3f7; transform: translateX(18px
 
 #startOptoutBtn {
   width: 100%;
-  background: #0d2233;
-  border: 1px solid #4fc3f7;
-  color: #4fc3f7;
+  background: #8b0000;
+  border: 1px solid #cc2200;
+  color: #fff;
   font-family: monospace;
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  padding: 7px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  padding: 9px 7px;
   cursor: pointer;
   border-radius: 2px;
-  margin-top: 2px;
-  transition: background 0.2s;
+  margin-top: 4px;
+  transition: background 0.15s, border-color 0.15s;
+  text-transform: uppercase;
 }
 
 #startOptoutBtn:hover {
-  background: #0f3a52;
+  background: #b30000;
+  border-color: #ff2200;
 }
 
 #startOptoutBtn:disabled {
-  opacity: 0.45;
+  background: #1a0a0a;
+  border-color: #3a1a1a;
+  color: #664444;
   cursor: default;
+}
+
+/* Post-send protest message */
+.erased-message {
+  background: #040e08;
+  border-left: 3px solid #22cc44;
+  padding: 8px 10px;
+  margin: 6px 0 4px;
+}
+
+.erased-message.hidden { display: none; }
+
+.erased-headline {
+  font-size: 13px;
+  font-weight: 900;
+  color: #22cc44;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.erased-body {
+  font-size: 9px;
+  color: #448855;
+  line-height: 1.6;
 }
 
 .broker-list {
@@ -223,34 +278,116 @@ input:checked + .slider:before { background: #4fc3f7; transform: translateX(18px
   text-transform: uppercase;
 }
 
-.dot-idle      { background: #2a3a4a; }
-.dot-submitted { background: #4fc3f7; }
-.dot-manual    { background: #f4a261; }
-.dot-error     { background: #e05252; }
+/* ── Two-section broker list ─────────────────────────────────────── */
 
-.status-submitted { color: #4fc3f7; }
-.status-manual    { color: #f4a261; }
-.status-error     { color: #e05252; }
+.section-header {
+  padding: 6px 8px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  font-weight: bold;
+  margin-top: 4px;
+}
 
-.broker-item {
+.section-manual {
+  background: #1a0800;
+  color: #ff7733;
+  border-left: 3px solid #cc4400;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.section-auto {
+  background: #040e08;
+  color: #22cc44;
+  border-left: 3px solid #22cc44;
+  cursor: default;
+  font-size: 10px;
+}
+
+.toggle-auto {
   cursor: pointer;
+  opacity: 0.7;
+  margin-left: 6px;
+  font-weight: normal;
 }
-.broker-item:hover {
-  background: #111c28;
+.toggle-auto:hover { opacity: 1; }
+
+/* Manual broker rows */
+.broker-row-manual {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border-bottom: 1px solid #111820;
+  background: #0e1420;
 }
 
-.broker-instructions {
-  padding: 5px 7px 6px 19px;
+.broker-name-manual {
+  font-size: 10px;
+  color: #e0c090;
+  flex: 1;
+}
+
+.broker-instructions-manual {
+  padding: 5px 8px 7px 10px;
   font-family: monospace;
   font-size: 9px;
-  color: #6a8899;
-  line-height: 1.5;
-  background: #0a0f18;
-  border-bottom: 1px solid #111820;
+  color: #c08850;
+  line-height: 1.6;
+  background: #130c04;
+  border-bottom: 1px solid #1e1408;
+  white-space: pre-wrap;
 }
 
-.broker-instructions.hidden {
-  display: none;
+/* Open button */
+.open-btn {
+  background: #f4a261;
+  color: #000;
+  border: none;
+  border-radius: 2px;
+  font-family: monospace;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.open-btn:hover { background: #ffb87a; }
+.open-btn-done {
+  background: #1a3a1a;
+  color: #4fc3f7;
+  cursor: default;
+}
+.open-btn-done:hover { background: #1a3a1a; }
+
+/* Auto broker rows */
+.auto-broker-list { border-top: none; }
+.auto-broker-list.hidden { display: none; }
+
+.broker-row-auto {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 8px;
+  border-bottom: 1px solid #0c1520;
+}
+
+.broker-name-auto {
+  font-size: 9px;
+  color: #5a7890;
+  flex: 1;
+}
+
+.broker-badge-sent {
+  font-size: 8px;
+  color: #2a6848;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: #0a1a10;
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid #1a3828;
 }
 
 #redoOptoutBtn {

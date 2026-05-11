@@ -31,16 +31,18 @@ function scanAndBlock() {
 }
 
 function tryOneTrust() {
+  // Prefer "necessary only" button; fall back to reject-all
   const btn = document.querySelector(
-    '#onetrust-reject-all-handler, .ot-pc-refuse-all-handler'
+    '.ot-pc-refuse-all-handler, #onetrust-reject-all-handler'
   );
   if (btn) { btn.click(); notifyBlocked(); return true; }
   return false;
 }
 
 function tryCookiebot() {
+  // "Allow necessary only" = decline non-essential
   const btn = document.querySelector(
-    '#CybotCookiebotDialogBodyButtonDecline'
+    '#CybotCookiebotDialogBodyLevelButtonLevelOptinDeclineAll, #CybotCookiebotDialogBodyButtonDecline'
   );
   if (btn) { btn.click(); notifyBlocked(); return true; }
   return false;
@@ -55,18 +57,32 @@ function tryTrustArc() {
 }
 
 function tryGeneric() {
-  // Find any button whose visible text says "reject all", "decline all", etc.
-  const keywords = [
+  // Prefer "necessary/essential only" text first, then fall back to reject/decline
+  const preferredKeywords = [
+    'necessary only', 'essential only', 'accept necessary',
+    'accept essential', 'only necessary', 'only essential',
+    'use necessary', 'use essential'
+  ];
+  const fallbackKeywords = [
     'reject all', 'decline all', 'deny all',
-    'necessary only', 'essential only',
     'reject cookies', 'decline cookies'
   ];
   const candidates = Array.from(
     document.querySelectorAll('button, [role="button"], a')
   );
+  // First pass: necessary/essential only buttons
   for (const el of candidates) {
     const text = el.textContent.toLowerCase().trim();
-    if (keywords.some(k => text.includes(k))) {
+    if (preferredKeywords.some(k => text.includes(k))) {
+      el.click();
+      notifyBlocked();
+      return true;
+    }
+  }
+  // Second pass: reject/decline all buttons
+  for (const el of candidates) {
+    const text = el.textContent.toLowerCase().trim();
+    if (fallbackKeywords.some(k => text.includes(k))) {
       el.click();
       notifyBlocked();
       return true;

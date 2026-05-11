@@ -2,12 +2,23 @@
 
 let blockedCount = 0;
 let blockingEnabled = true;
+let optoutTabId = null; // ID of the one opt-out tab currently open
 
 // Restore persisted state on startup
-chrome.storage.local.get(['blockingEnabled', 'blockedCount'], (result) => {
-  blockingEnabled = result.blockingEnabled !== false;
-  blockedCount = result.blockedCount || 0;
+chrome.storage.local.get(['blockingEnabled', 'blockedCount'], (r) => {
+  blockingEnabled = r.blockingEnabled !== false;
+  blockedCount = r.blockedCount || 0;
   updateBadge();
+  // Resume queue if service worker restarted mid-run
+  if (!optoutTabId) openNextOptout();
+});
+
+// When the opt-out tab closes, open the next one in the queue
+chrome.tabs.onRemoved.addListener((tabId) => {
+  if (tabId === optoutTabId) {
+    optoutTabId = null;
+    setTimeout(openNextOptout, 600);
+  }
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -43,8 +54,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ success: true });
   }
 
+  // Popup sends the full list of auto-broker URLs to process
+  if (message.type === 'START_OPTOUT_QUEUE') {
+    chrome.storage.local.set({ optoutQueue: message.urls }, openNextOptout);
+  }
+
+  // optout.js signals it's done — remove the tab (onRemoved opens the next)
+  if (message.type === 'CLOSE_ME' && sender.tab) {
+    chrome.tabs.remove(sender.tab.id).catch(() => {});
+  }
+
   return true;
 });
+
+function openNextOptout() {
+  if (optoutTabId !== null) return; // One already in progress
+  chrome.storage.local.get(['optoutQueue'], ({ optoutQueue }) => {
+    if (!optoutQueue || optoutQueue.length === 0) {
+      chrome.storage.local.remove(['optoutQueue']);
+      return;
+    }
+    const [next, ...rest] = optoutQueue;
+    chrome.storage.local.set({ optoutQueue: rest }, () => {
+      chrome.tabs.create({ url: next, active: false }, (tab) => {
+        optoutTabId = tab.id;
+      });
+    });
+  });
+}
 
 function updateBadge() {
   const text = blockedCount > 0 ? String(blockedCount) : '';
