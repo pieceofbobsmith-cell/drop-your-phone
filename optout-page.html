@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drop Your Phone — Erase Yourself From 107 Databases</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --red:    #cc2200;
+      --red2:   #ff3311;
+      --red3:   #ff6644;
+      --green:  #22cc44;
+      --orange: #ff6622;
+      --bg:     #050505;
+      --bg2:    #0a0a0a;
+      --bg3:    #0f0f0f;
+      --border: #1a1a1a;
+      --text:   #e0e0e0;
+      --muted:  #888;
+      --mono:   'Courier New', monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    a { color: var(--red3); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── NAV ─────────────────────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: rgba(5,5,5,0.96);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      height: 48px;
+      backdrop-filter: blur(8px);
+    }
+    .nav-title {
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: 0.2em;
+      color: var(--red2);
+    }
+    .nav-links { display: flex; gap: 24px; }
+    .nav-links a {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+    .nav-cta {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: var(--red3);
+      border: 1px solid var(--red);
+      padding: 4px 12px;
+      border-radius: 2px;
+      text-transform: uppercase;
+    }
+    .nav-cta:hover { background: var(--red); color: #fff; text-decoration: none; }
+
+    /* ── SECTIONS ────────────────────────────────────────────────── */
+    section { padding: 80px 32px; max-width: 900px; margin: 0 auto; }
+
+    /* ── HERO ────────────────────────────────────────────────────── */
+    #hero {
+      min-height: 100vh;
+      max-width: 100%;
+      padding: 0 32px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: flex-start;
+      background:
+        radial-gradient(ellipse 60% 50% at 80% 50%, rgba(120,10,0,0.18) 0%, transparent 70%),
+        var(--bg);
+      border-bottom: 1px solid #1a0500;
+      position: relative;
+    }
+    .hero-inner { max-width: 800px; padding: 100px 0 80px; }
+
+    .hero-kicker {
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      color: var(--red);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .hero-headline {
+      font-size: clamp(52px, 10vw, 100px);
+      font-weight: 900;
+      color: var(--red2);
+      line-height: 0.95;
+      letter-spacing: -0.01em;
+      margin-bottom: 12px;
+    }
+
+    .hero-sub {
+      font-size: clamp(18px, 3vw, 28px);
+      font-weight: 900;
+      color: #fff;
+      letter-spacing: 0.02em;
+      margin-bottom: 32px;
+      line-height: 1.2;
+    }
+
+    .hero-body {
+      font-size: 14px;
+      color: #cc8877;
+      line-height: 1.8;
+      max-width: 560px;
+      margin-bottom: 40px;
+    }
+
+    .hero-body strong { color: #ff9977; }
+
+    .hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    .btn-primary {
+      background: var(--red);
+      color: #fff;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border: none;
+      padding: 14px 28px;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: background 0.15s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-primary:hover { background: var(--red2); text-decoration: none; color: #fff; }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border: 1px solid #333;
+      padding: 14px 28px;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: border-color 0.15s, color 0.15s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-secondary:hover { border-color: #666; color: var(--text); text-decoration: none; }
+
+    .hero-scroll {
+      position: absolute;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      color: #333;
+      text-transform: uppercase;
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+
+    /* ── STATS BAR ───────────────────────────────────────────────── */
+    #stats {
+      max-width: 100%;
+      background: #0d0000;
+      border-top: 1px solid #2a0a00;
+      border-bottom: 1px solid #2a0a00;
+      padding: 48px 32px;
+    }
+    .stats-grid {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+    }
+    .stat-item { text-align: center; }
+    .stat-num {
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 900;
+      color: var(--red2);
+      line-height: 1;
+      display: block;
+    }
+    .stat-label {
+      font-size: 11px;
+      color: #aa5544;
+      letter-spacing: 0.08em;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+
+    /* ── WHAT IS THIS ────────────────────────────────────────────── */
+    #what { border-bottom: 1px solid var(--border); }
+    .what-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      margin-top: 40px;
+    }
+    .section-label {
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      color: var(--red);
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      display: block;
+    }
+    h2 {
+      font-size: clamp(22px, 4vw, 36px);
+      font-weight: 900;
+      color: #fff;
+      line-height: 1.1;
+      margin-bottom: 20px;
+      letter-spacing: 0.02em;
+    }
+    .body-text {
+      font-size: 13px;
+      color: #999;
+      line-height: 1.8;
+    }
+    .body-text + .body-text { margin-top: 14px; }
+    .body-text strong { color: #ccc; }
+    .cite {
+      font-size: 10px;
+      color: #444;
+      margin-top: 20px;
+      line-height: 1.6;
+    }
+
+    /* ── OPT-OUT SECTION ─────────────────────────────────────────── */
+    #optout { border-bottom: 1px solid var(--border); }
+
+    .optout-header { margin-bottom: 40px; }
+    .optout-layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 40px;
+      align-items: start;
+    }
+
+    /* Form */
+    .form-panel {
+      position: sticky;
+      top: 64px;
+    }
+    .form-title {
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .form-input {
+      width: 100%;
+      background: #0d0d0d;
+      border: 1px solid #222;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      border-radius: 2px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-input:focus { border-color: var(--red); }
+    .form-input::placeholder { color: #333; }
+    .form-row { display: flex; gap: 8px; }
+    .form-row .form-input { flex: 1; }
+
+    .start-btn {
+      width: 100%;
+      background: var(--red);
+      border: none;
+      color: #fff;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 14px;
+      cursor: pointer;
+      border-radius: 2px;
+      margin-top: 8px;
+      transition: background 0.15s;
+    }
+    .start-btn:hover { background: var(--red2); }
+    .start-btn:disabled {
+      background: #1a0a0a;
+      border: 1px solid #2a1010;
+      color: #553333;
+      cursor: default;
+    }
+
+    .reset-btn {
+      width: 100%;
+      background: transparent;
+      border: 1px solid #1a1a1a;
+      color: #444;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 8px;
+      cursor: pointer;
+      border-radius: 2px;
+      margin-top: 6px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .reset-btn:hover { border-color: #444; color: #888; }
+
+    /* Progress */
+    .progress-box {
+      display: none;
+      background: #040e08;
+      border: 1px solid #0d3018;
+      border-radius: 2px;
+      padding: 14px;
+      margin-top: 16px;
+    }
+    .progress-box.show { display: block; }
+    .progress-label {
+      font-size: 10px;
+      color: var(--green);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .progress-bar-wrap {
+      height: 4px;
+      background: #0a2010;
+      border-radius: 2px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--green);
+      border-radius: 2px;
+      transition: width 0.4s;
+      width: 0%;
+    }
+    .progress-text {
+      font-size: 10px;
+      color: #448855;
+    }
+
+    /* Broker step panel */
+    .broker-panel { min-height: 400px; }
+
+    .idle-state {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 300px;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 40px;
+      color: #333;
+      font-size: 13px;
+      text-align: center;
+    }
+    .idle-arrow { font-size: 28px; color: #222; margin-bottom: 12px; }
+
+    /* Current broker card */
+    .broker-card {
+      display: none;
+      border: 1px solid #1a0500;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .broker-card.show { display: block; }
+
+    .broker-card-header {
+      background: #100500;
+      border-bottom: 1px solid #1a0800;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .broker-card-num {
+      font-size: 10px;
+      color: #555;
+      letter-spacing: 0.2em;
+    }
+    .broker-card-type {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      padding: 3px 8px;
+      border-radius: 2px;
+    }
+    .type-auto { background: #041008; color: var(--green); border: 1px solid #0a2010; }
+    .type-manual { background: #100800; color: var(--orange); border: 1px solid #2a1800; }
+
+    .broker-card-body { padding: 24px 20px; }
+    .broker-card-name {
+      font-size: 22px;
+      font-weight: 900;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .broker-card-url {
+      font-size: 10px;
+      color: #444;
+      margin-bottom: 20px;
+    }
+
+    .broker-card-instructions {
+      background: #0a0a0a;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      padding: 14px 16px;
+      font-size: 12px;
+      color: #999;
+      line-height: 1.8;
+      margin-bottom: 20px;
+      white-space: pre-wrap;
+    }
+    .broker-card-instructions.auto { border-color: #0a2010; color: #5a8a6a; }
+
+    .broker-card-actions { display: flex; gap: 10px; }
+    .open-site-btn {
+      flex: 1;
+      background: var(--red);
+      color: #fff;
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: none;
+      padding: 12px;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: background 0.15s;
+    }
+    .open-site-btn:hover { background: var(--red2); }
+    .open-site-btn.auto-btn {
+      background: #0a3018;
+      color: var(--green);
+      border: 1px solid #0d4020;
+    }
+    .open-site-btn.auto-btn:hover { background: #0d4020; }
+
+    .next-btn {
+      flex: 1;
+      background: #0d0d0d;
+      color: #888;
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      border: 1px solid #222;
+      padding: 12px;
+      cursor: pointer;
+      border-radius: 2px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .next-btn:hover { border-color: #555; color: var(--text); }
+    .next-btn.done-next {
+      border-color: #0d3018;
+      color: var(--green);
+    }
+    .next-btn.done-next:hover { background: #040e08; }
+
+    /* Complete state */
+    .complete-state {
+      display: none;
+      border: 1px solid #0a2810;
+      border-radius: 2px;
+      background: #020a04;
+      padding: 40px;
+      text-align: center;
+    }
+    .complete-state.show { display: block; }
+    .complete-check { font-size: 40px; color: var(--green); margin-bottom: 16px; }
+    .complete-headline {
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--green);
+      margin-bottom: 12px;
+    }
+    .complete-body { font-size: 12px; color: #4a8a5a; line-height: 1.8; }
+
+    /* All brokers list */
+    .all-brokers-section { margin-top: 40px; }
+    .all-brokers-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .all-brokers-title {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: #555;
+      text-transform: uppercase;
+    }
+    .all-brokers-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 6px;
+    }
+    .broker-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      background: #080808;
+      border: 1px solid #111;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .broker-chip:hover { border-color: #333; }
+    .broker-chip.done { border-color: #0a2010; }
+    .broker-chip.is-manual { border-left: 2px solid #cc440022; }
+    .broker-chip.is-manual:hover { border-color: #cc4400; }
+    .chip-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: #1a1a1a;
+      transition: background 0.2s;
+    }
+    .broker-chip.done .chip-dot { background: var(--green); }
+    .broker-chip.is-current .chip-dot { background: var(--red2); }
+    .chip-name {
+      font-size: 10px;
+      color: #555;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+      transition: color 0.2s;
+    }
+    .broker-chip.done .chip-name { color: #336633; }
+    .broker-chip.is-current .chip-name { color: #fff; }
+    .chip-badge {
+      font-size: 8px;
+      letter-spacing: 0.05em;
+      color: #333;
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+    .broker-chip.is-manual .chip-badge { color: #663300; }
+
+    /* ── FOOTER ──────────────────────────────────────────────────── */
+    footer {
+      max-width: 100%;
+      background: #030303;
+      border-top: 1px solid var(--border);
+      padding: 40px 32px;
+      text-align: center;
+    }
+    .footer-inner { max-width: 600px; margin: 0 auto; }
+    .footer-rule { width: 48px; height: 1px; background: #1a1a1a; margin: 0 auto 20px; }
+    .footer-text {
+      font-size: 10px;
+      color: #333;
+      line-height: 2;
+    }
+    .footer-text a { color: #555; }
+
+    /* ── RESPONSIVE ──────────────────────────────────────────────── */
+    @media (max-width: 720px) {
+      nav { padding: 0 16px; }
+      .nav-links { display: none; }
+      section { padding: 60px 16px; }
+      #hero { padding: 0 16px; }
+      .hero-inner { padding: 80px 0 60px; }
+      .stats-grid { grid-template-columns: 1fr; gap: 24px; }
+      .what-grid { grid-template-columns: 1fr; }
+      .optout-layout { grid-template-columns: 1fr; }
+      .form-panel { position: static; }
+      .all-brokers-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ───────────────────────────────────────────────────────── -->
+<nav>
+  <span class="nav-title">DROP YOUR PHONE</span>
+  <div class="nav-links">
+    <a href="#what">What Is This</a>
+    <a href="#optout">Erase Yourself</a>
+    <a href="game.html" target="_blank">Play Game</a>
+  </div>
+  <a class="nav-cta" href="https://github.com/pieceofbobsmith-cell/drop-your-phone" target="_blank">Get Extension</a>
+</nav>
+
+<!-- ── HERO ──────────────────────────────────────────────────────── -->
+<div id="hero">
+  <div class="hero-inner">
+    <div class="hero-kicker">A social justice project about surveillance and immigration</div>
+    <div class="hero-headline">THEY<br>SOLD<br>YOU.</div>
+    <div class="hero-sub">107 data brokers.<br>One of their customers is ICE.</div>
+    <p class="hero-body">
+      Your name, address, phone number, relatives, and real-time location are
+      being sold right now — by companies you've never heard of, to anyone
+      willing to pay. <strong>Immigration and Customs Enforcement is a paying customer.</strong>
+      This is completely legal. And you can opt out.
+    </p>
+    <div class="hero-actions">
+      <a class="btn-primary" href="#optout">⚡ Erase Yourself</a>
+      <a class="btn-secondary" href="#what">What Is This?</a>
+    </div>
+  </div>
+  <div class="hero-scroll">scroll ↓</div>
+</div>
+
+<!-- ── STATS ─────────────────────────────────────────────────────── -->
+<div id="stats">
+  <div class="stats-grid">
+    <div class="stat-item">
+      <span class="stat-num">$6.1M+</span>
+      <div class="stat-label">spent by ICE on commercial<br>location data (2021)</div>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num">107</span>
+      <div class="stat-label">data brokers selling<br>your personal records</div>
+    </div>
+    <div class="stat-item">
+      <span class="stat-num">0</span>
+      <div class="stat-label">warrants required to<br>purchase your location</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── WHAT IS THIS ───────────────────────────────────────────────── -->
+<section id="what">
+  <span class="section-label">What is this</span>
+  <h2>DATA BROKERS ARE THE INFRASTRUCTURE OF MODERN SURVEILLANCE.</h2>
+  <div class="what-grid">
+    <div>
+      <p class="body-text">
+        Data brokers are companies that collect personal information — from public records,
+        app location data, social media, and purchase history — and sell it to anyone who pays.
+        <strong>No warrant. No oversight. No notification to you.</strong>
+      </p>
+      <p class="body-text">
+        ICE and other government agencies have spent millions purchasing this data to locate,
+        track, and arrest immigrants — sidestepping constitutional protections that would
+        normally require judicial approval.
+      </p>
+      <p class="body-text">
+        Georgetown Law's Center on Privacy and Technology calls it the
+        "American Dragnet": a mass surveillance system built from commercial data,
+        targeting immigrant communities.
+      </p>
+    </div>
+    <div>
+      <p class="body-text">
+        <strong>The good news:</strong> US privacy law gives you the right to opt out of
+        data broker databases. It's a slow, tedious process — each broker has its own
+        form, its own verification step, its own delay.
+      </p>
+      <p class="body-text">
+        This tool automates it. Enter your information once. We walk you through
+        all 107 databases — auto-filling what we can, giving you step-by-step
+        instructions for the rest.
+      </p>
+      <p class="body-text">
+        <strong>Install the Chrome extension</strong> for full automation: the extension
+        opens each opt-out tab in the background, fills the form, and submits —
+        completely without you needing to interact.
+      </p>
+      <p class="cite">
+        Sources: Georgetown Law Center on Privacy and Technology, "American Dragnet" (2022);
+        Brennan Center for Justice; ACLU; Electronic Frontier Foundation.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ── OPT-OUT ────────────────────────────────────────────────────── -->
+<section id="optout">
+  <div class="optout-header">
+    <span class="section-label">Take action</span>
+    <h2>ERASE YOURSELF FROM ALL OF THEM.</h2>
+  </div>
+
+  <div class="optout-layout">
+
+    <!-- LEFT: form + progress -->
+    <div class="form-panel">
+      <div class="form-title">Your Information</div>
+      <input class="form-input" id="firstName" type="text"  placeholder="First name"  autocomplete="given-name">
+      <input class="form-input" id="lastName"  type="text"  placeholder="Last name"   autocomplete="family-name">
+      <input class="form-input" id="email"     type="email" placeholder="Email"       autocomplete="email">
+      <div class="form-row">
+        <input class="form-input" id="city"  type="text" placeholder="City"  autocomplete="address-level2">
+        <input class="form-input" id="state" type="text" placeholder="State" autocomplete="address-level1" maxlength="2" style="max-width:90px">
+      </div>
+      <button class="start-btn" id="startBtn">⚡ ERASE ME FROM 107 DATABASES</button>
+      <button class="reset-btn hidden" id="resetBtn">↺ Start Over</button>
+
+      <div class="progress-box" id="progressBox">
+        <div class="progress-label">Progress</div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">0 of 107 done</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: broker step-through -->
+    <div class="broker-panel">
+
+      <div class="idle-state" id="idleState">
+        <div class="idle-arrow">↑</div>
+        Fill in your info and click to begin.<br>
+        We'll walk you through all 107 databases,<br>one at a time.
+      </div>
+
+      <div class="broker-card" id="brokerCard">
+        <div class="broker-card-header">
+          <span class="broker-card-num" id="cardNum">1 of 107</span>
+          <span class="broker-card-type" id="cardType">AUTO</span>
+        </div>
+        <div class="broker-card-body">
+          <div class="broker-card-name" id="cardName"></div>
+          <div class="broker-card-url" id="cardUrl"></div>
+          <div class="broker-card-instructions" id="cardInstructions"></div>
+          <div class="broker-card-actions">
+            <button class="open-site-btn" id="openSiteBtn">Open Site →</button>
+            <button class="next-btn" id="nextBtn">Skip →</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="complete-state" id="completeState">
+        <div class="complete-check">✓</div>
+        <div class="complete-headline" id="completeHeadline"></div>
+        <div class="complete-body">
+          They commodified your existence.<br>
+          They sold your location, your relatives, your past.<br><br>
+          <strong style="color:#5aaa7a">You just took yourself back from all of them.</strong><br><br>
+          Opt-outs take 2–4 weeks to process.<br>
+          Run this again in 30 days — brokers re-acquire data constantly.
+        </div>
+      </div>
+
+      <!-- All brokers list -->
+      <div class="all-brokers-section" id="allBrokersList" style="display:none">
+        <div class="all-brokers-header">
+          <span class="all-brokers-title">All 107 databases</span>
+          <span style="font-size:10px;color:#333">click any to jump to it</span>
+        </div>
+        <div class="all-brokers-grid" id="chipsGrid"></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────────── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-rule"></div>
+    <p class="footer-text">
+      Learn more: <a href="https://www.law.georgetown.edu/privacy-technology-center/publications/american-dragnet-data-driven-deportation-in-the-21st-century/" target="_blank">American Dragnet</a> — Georgetown Law Center on Privacy and Technology<br>
+      <a href="https://www.eff.org/issues/surveillance" target="_blank">Electronic Frontier Foundation</a> &nbsp;·&nbsp;
+      <a href="https://www.aclu.org/issues/privacy-technology/surveillance-technologies/ice-surveillance" target="_blank">ACLU on ICE Surveillance</a><br><br>
+      "Drop Your Phone" is a social justice art project about surveillance, immigration, and the price of being connected.<br>
+      <a href="https://github.com/pieceofbobsmith-cell/drop-your-phone" target="_blank">Chrome Extension on GitHub</a>
+      &nbsp;·&nbsp;
+      <a href="game.html" target="_blank">Play the Game</a>
+    </p>
+  </div>
+</footer>
+
+<script src="brokers.js"></script>
+<script>
+(function () {
+  const STORAGE_KEY = 'dropYourPhone_profile';
+  const STATUS_KEY  = 'dropYourPhone_status';
+
+  // ── Elements ──────────────────────────────────────────────────────
+  const firstNameEl  = document.getElementById('firstName');
+  const lastNameEl   = document.getElementById('lastName');
+  const emailEl      = document.getElementById('email');
+  const cityEl       = document.getElementById('city');
+  const stateEl      = document.getElementById('state');
+  const startBtn     = document.getElementById('startBtn');
+  const resetBtn     = document.getElementById('resetBtn');
+  const progressBox  = document.getElementById('progressBox');
+  const progressFill = document.getElementById('progressFill');
+  const progressText = document.getElementById('progressText');
+  const idleState    = document.getElementById('idleState');
+  const brokerCard   = document.getElementById('brokerCard');
+  const completeState= document.getElementById('completeState');
+  const allBrokersList = document.getElementById('allBrokersList');
+  const chipsGrid    = document.getElementById('chipsGrid');
+
+  let currentIndex = 0;
+  let completed = new Set();
+  let started = false;
+
+  // ── Restore profile ───────────────────────────────────────────────
+  const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  if (saved.firstName) firstNameEl.value = saved.firstName;
+  if (saved.lastName)  lastNameEl.value  = saved.lastName;
+  if (saved.email)     emailEl.value     = saved.email;
+  if (saved.city)      cityEl.value      = saved.city;
+  if (saved.state)     stateEl.value     = saved.state;
+
+  // ── Restore status ────────────────────────────────────────────────
+  const savedStatus = JSON.parse(localStorage.getItem(STATUS_KEY) || '{}');
+  if (savedStatus.completed) {
+    completed = new Set(savedStatus.completed);
+    currentIndex = savedStatus.currentIndex || 0;
+    if (savedStatus.started) {
+      started = true;
+      beginFlow();
+    }
+  }
+
+  // ── Auto-save profile ─────────────────────────────────────────────
+  let saveTimer;
+  [firstNameEl, lastNameEl, emailEl, cityEl, stateEl].forEach(el => {
+    el.addEventListener('input', () => {
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(saveProfile, 400);
+    });
+  });
+
+  function saveProfile() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      firstName: firstNameEl.value.trim(),
+      lastName:  lastNameEl.value.trim(),
+      email:     emailEl.value.trim(),
+      city:      cityEl.value.trim(),
+      state:     stateEl.value.trim().toUpperCase(),
+    }));
+  }
+
+  function saveStatus() {
+    localStorage.setItem(STATUS_KEY, JSON.stringify({
+      completed: [...completed],
+      currentIndex,
+      started,
+    }));
+  }
+
+  // ── Start ─────────────────────────────────────────────────────────
+  startBtn.addEventListener('click', () => {
+    const firstName = firstNameEl.value.trim();
+    const lastName  = lastNameEl.value.trim();
+    if (!firstName || !lastName) { firstNameEl.focus(); return; }
+    saveProfile();
+    started = true;
+    currentIndex = 0;
+    beginFlow();
+    saveStatus();
+  });
+
+  resetBtn.addEventListener('click', () => {
+    completed.clear();
+    currentIndex = 0;
+    started = false;
+    localStorage.removeItem(STATUS_KEY);
+    brokerCard.classList.remove('show');
+    completeState.classList.remove('show');
+    allBrokersList.style.display = 'none';
+    idleState.style.display = 'flex';
+    progressBox.classList.remove('show');
+    startBtn.disabled = false;
+    startBtn.textContent = '⚡ ERASE ME FROM 107 DATABASES';
+    resetBtn.classList.add('hidden');
+    updateChips();
+  });
+
+  // ── Flow ──────────────────────────────────────────────────────────
+  function beginFlow() {
+    idleState.style.display = 'none';
+    allBrokersList.style.display = 'block';
+    progressBox.classList.add('show');
+    startBtn.disabled = true;
+    startBtn.textContent = '✓ STARTED — work through the list →';
+    resetBtn.classList.remove('hidden');
+    buildChips();
+    showBroker(currentIndex);
+    updateProgress();
+  }
+
+  function showBroker(index) {
+    if (index >= BROKERS.length) { showComplete(); return; }
+    currentIndex = index;
+    const b = BROKERS[index];
+    const isManual = !!b.manual;
+
+    document.getElementById('cardNum').textContent = (index + 1) + ' of ' + BROKERS.length;
+    document.getElementById('cardType').textContent = isManual ? 'MANUAL' : 'AUTO';
+    document.getElementById('cardType').className = 'broker-card-type ' + (isManual ? 'type-manual' : 'type-auto');
+    document.getElementById('cardName').textContent = b.name;
+    document.getElementById('cardUrl').textContent = b.url;
+
+    const inst = document.getElementById('cardInstructions');
+    inst.textContent = b.instructions || '';
+    inst.className = 'broker-card-instructions' + (isManual ? '' : ' auto');
+
+    const openBtn = document.getElementById('openSiteBtn');
+    openBtn.textContent = isManual ? 'Open Site →' : '⚡ Open & Auto-fill →';
+    openBtn.className = 'open-site-btn' + (isManual ? '' : ' auto-btn');
+
+    const nextBtn = document.getElementById('nextBtn');
+    nextBtn.textContent = 'Skip →';
+    nextBtn.className = 'next-btn';
+
+    brokerCard.classList.add('show');
+    completeState.classList.remove('show');
+    updateChips();
+    saveStatus();
+  }
+
+  document.getElementById('openSiteBtn').addEventListener('click', () => {
+    const b = BROKERS[currentIndex];
+    window.open(b.url, '_blank');
+    // Mark as done and advance
+    const nextBtn = document.getElementById('nextBtn');
+    nextBtn.textContent = 'Done — Next →';
+    nextBtn.className = 'next-btn done-next';
+    markDone(currentIndex);
+  });
+
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    markDone(currentIndex);
+    advanceToNext();
+  });
+
+  function markDone(index) {
+    completed.add(BROKERS[index].id);
+    updateProgress();
+    updateChips();
+    saveStatus();
+  }
+
+  function advanceToNext() {
+    let next = currentIndex + 1;
+    while (next < BROKERS.length && completed.has(BROKERS[next].id)) next++;
+    if (next >= BROKERS.length) { showComplete(); return; }
+    showBroker(next);
+  }
+
+  function showComplete() {
+    brokerCard.classList.remove('show');
+    completeState.classList.add('show');
+    const n = completed.size;
+    document.getElementById('completeHeadline').textContent = '✓ ' + n + ' OPT-OUTS SUBMITTED.';
+    updateProgress();
+    updateChips();
+  }
+
+  // ── Progress ──────────────────────────────────────────────────────
+  function updateProgress() {
+    const n = completed.size;
+    const total = BROKERS.length;
+    const pct = Math.round((n / total) * 100);
+    progressFill.style.width = pct + '%';
+    progressText.textContent = n + ' of ' + total + ' done (' + pct + '%)';
+  }
+
+  // ── Chips ─────────────────────────────────────────────────────────
+  function buildChips() {
+    chipsGrid.innerHTML = '';
+    BROKERS.forEach((b, i) => {
+      const chip = document.createElement('div');
+      chip.className = 'broker-chip' + (b.manual ? ' is-manual' : '');
+      chip.dataset.index = i;
+      chip.innerHTML = '<span class="chip-dot"></span>'
+        + '<span class="chip-name">' + escHtml(b.name) + '</span>'
+        + '<span class="chip-badge">' + (b.manual ? 'manual' : 'auto') + '</span>';
+      chip.addEventListener('click', () => {
+        if (started) showBroker(i);
+      });
+      chipsGrid.appendChild(chip);
+    });
+    updateChips();
+  }
+
+  function updateChips() {
+    if (!chipsGrid.children.length) return;
+    BROKERS.forEach((b, i) => {
+      const chip = chipsGrid.children[i];
+      if (!chip) return;
+      chip.classList.toggle('done', completed.has(b.id));
+      chip.classList.toggle('is-current', i === currentIndex && started);
+    });
+  }
+
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Rebuild if restored ───────────────────────────────────────────
+  function beginFlow() {
+    idleState.style.display = 'none';
+    allBrokersList.style.display = 'block';
+    progressBox.classList.add('show');
+    startBtn.disabled = true;
+    startBtn.textContent = '✓ STARTED — work through the list →';
+    resetBtn.classList.remove('hidden');
+    buildChips();
+    // Find first undone broker
+    let idx = currentIndex;
+    while (idx < BROKERS.length && completed.has(BROKERS[idx].id)) idx++;
+    if (idx >= BROKERS.length) { showComplete(); }
+    else { showBroker(idx); }
+    updateProgress();
+  }
+})();
+</script>
+</body>
+</html>
