@@ -50,11 +50,17 @@
     #phone-dot { width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.35); transition:background 0.4s; }
     #phone-hint { color:rgba(255,255,255,0.45); font-size:8px; margin-top:3px; }
 
+    #status-wrap { position:absolute; bottom:100px; right:16px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.05); border-radius:4px; padding:6px 10px; text-align:right; }
+    #status-mode { color:rgba(255,255,255,0.5); font-size:8px; letter-spacing:0.2em; height:12px; }
+
     #objective { position:absolute; bottom:56px; left:50%; transform:translateX(-50%); text-align:center; }
     #obj-next { color:rgba(255,255,255,0.5); font-size:8px; letter-spacing:0.3em; margin-bottom:2px; }
     #obj-label { color:rgba(255,255,255,0.95); font-size:12px; letter-spacing:0.1em; }
     #obj-desc { color:rgba(255,255,255,0.65); font-size:9px; margin-top:2px; }
     #obj-need-phone { color:rgba(220,80,60,0.9); font-size:8px; margin-top:2px; }
+
+    #interact-prompt { position:absolute; bottom:120px; left:50%; transform:translateX(-50%); text-align:center; background:rgba(0,0,0,0.7); border:1px solid rgba(255,255,255,0.15); border-radius:4px; padding:8px 18px; opacity:0; transition:opacity 0.25s; }
+    #interact-text { color:rgba(255,255,255,0.85); font-size:11px; letter-spacing:0.15em; }
 
     #msg-flash { position:absolute; top:42%; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.72); border:1px solid rgba(255,255,255,0.09); border-radius:4px; padding:10px 20px; opacity:0; transition:opacity 0.3s; white-space:nowrap; }
     #msg-text { color:rgba(255,255,255,0.72); font-size:12px; }
@@ -63,15 +69,26 @@
     #minimap-canvas { display:block; }
     #minimap-label { position:absolute; top:4px; left:6px; font-size:7px; color:rgba(255,255,255,0.13); letter-spacing:0.2em; }
 
-    #controls { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); color:rgba(255,255,255,0.45); font-size:8px; letter-spacing:0.25em; white-space:nowrap; }
+    #controls { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); color:rgba(255,255,255,0.35); font-size:8px; letter-spacing:0.2em; white-space:nowrap; }
     #vignette { position:absolute; inset:0; pointer-events:none; }
     #ice-border { position:absolute; inset:0; pointer-events:none; border:2px solid rgba(180,0,0,0); transition:border-color 0.5s; }
 
+    /* Interior overlay */
+    #interior-screen { background:#060810; }
+    #interior-location { color:rgba(255,255,255,0.3); font-size:9px; letter-spacing:0.4em; margin-bottom:24px; }
+    #interior-title { color:#e0e0e0; font-size:18px; letter-spacing:0.15em; margin-bottom:8px; opacity:0; transition:opacity 0.8s; }
+    #interior-task { color:rgba(255,255,255,0.6); font-size:11px; letter-spacing:0.08em; margin-bottom:40px; opacity:0; transition:opacity 0.8s; }
+    #interior-fact { color:rgba(200,70,50,0.85); font-size:10px; letter-spacing:0.05em; max-width:420px; text-align:center; line-height:1.8; margin-bottom:30px; opacity:0; transition:opacity 1.2s; }
+    #interior-prompt { color:rgba(255,255,255,0.45); font-size:9px; letter-spacing:0.3em; opacity:0; transition:opacity 0.8s; }
+
+    /* Fade overlay */
+    #fade { position:fixed; top:0; left:0; width:100%; height:100%; background:#000; opacity:0; pointer-events:none; z-index:50; transition:opacity 0.5s; }
+
     /* End screen */
     #end-screen { background:#000; text-align:center; padding:40px; }
-    #end-lines { max-width:480px; }
-    .end-line { font-size:14px; letter-spacing:0.08em; line-height:2.2; color:rgba(255,255,255,0.92); opacity:0; transition:opacity 1.2s; margin:2px 0; display:block; }
-    #end-footer { position:absolute; bottom:48px; max-width:420px; text-align:center; opacity:0; transition:opacity 1.5s; padding:0 24px; }
+    #end-lines { max-width:500px; }
+    .end-line { font-size:13px; letter-spacing:0.07em; line-height:2.3; color:rgba(255,255,255,0.92); opacity:0; transition:opacity 1.2s; margin:2px 0; display:block; }
+    #end-footer { position:absolute; bottom:48px; max-width:440px; text-align:center; opacity:0; transition:opacity 1.5s; padding:0 24px; }
     #end-footer-rule { width:64px; height:1px; background:rgba(255,255,255,0.2); margin:0 auto 20px; }
     #end-footer p { color:rgba(255,255,255,0.6); font-size:10px; letter-spacing:0.08em; line-height:2; }
     #end-restart { position:absolute; bottom:130px; opacity:0; transition:opacity 1s; pointer-events:auto; }
@@ -81,6 +98,7 @@
 </head>
 <body>
   <div id="renderer-container"></div>
+  <div id="fade"></div>
 
   <!-- HUD -->
   <div id="hud" class="hidden">
@@ -95,18 +113,20 @@
       <div id="phone-row"><span id="phone-label">PHONE ON</span><div id="phone-dot"></div></div>
       <div id="phone-hint">SPACE = drop phone</div>
     </div>
+    <div id="status-wrap"><div id="status-mode"></div></div>
     <div id="objective">
       <div id="obj-next">NEXT</div>
       <div id="obj-label"></div>
       <div id="obj-desc"></div>
       <div id="obj-need-phone"></div>
     </div>
+    <div id="interact-prompt"><span id="interact-text">PRESS E TO ENTER</span></div>
     <div id="msg-flash"><span id="msg-text"></span></div>
     <div id="minimap">
       <canvas id="minimap-canvas" width="120" height="120"></canvas>
       <div id="minimap-label">MAP</div>
     </div>
-    <div id="controls">WASD · Mouse to look · Click canvas to lock cursor · SPACE = drop phone</div>
+    <div id="controls">WASD · Mouse · SHIFT=sprint · CTRL=crouch · SPACE=drop phone · E=enter building</div>
     <div id="vignette"></div>
     <div id="ice-border"></div>
   </div>
@@ -123,8 +143,17 @@
   <div id="intro-screen" class="screen hidden">
     <div id="intro-line1">Every app on your phone is selling your location.</div>
     <div id="intro-line2">ICE is buying it.</div>
-    <div id="intro-line3">You have errands to run.</div>
+    <div id="intro-line3">You have errands to run. Get home.</div>
     <div id="intro-prompt">PRESS SPACE TO BEGIN</div>
+  </div>
+
+  <!-- Interior -->
+  <div id="interior-screen" class="screen hidden">
+    <div id="interior-location"></div>
+    <div id="interior-title"></div>
+    <div id="interior-task"></div>
+    <div id="interior-fact"></div>
+    <div id="interior-prompt">PRESS E TO LEAVE</div>
   </div>
 
   <!-- End -->
@@ -132,7 +161,7 @@
     <div id="end-lines"></div>
     <div id="end-footer">
       <div id="end-footer-rule"></div>
-      <p>Learn more about how data brokers enable government surveillance:<br>search "American Dragnet" by Georgetown Law's Center on Privacy and Technology.</p>
+      <p>Learn more: search "American Dragnet" — Georgetown Law Center on Privacy and Technology.<br>Data broker opt-outs: use the Drop Your Phone extension.</p>
     </div>
     <div id="end-restart"><button id="end-restart-btn">PRESS SPACE TO RESTART</button></div>
   </div>
