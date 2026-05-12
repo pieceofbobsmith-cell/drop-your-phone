@@ -58,6 +58,15 @@
     #obj-label { color:rgba(255,255,255,0.95); font-size:12px; letter-spacing:0.1em; }
     #obj-desc { color:rgba(255,255,255,0.65); font-size:9px; margin-top:2px; }
     #obj-need-phone { color:rgba(220,80,60,0.9); font-size:8px; margin-top:2px; }
+    #obj-sublabel { color:rgba(255,255,255,0.55); font-size:9px; letter-spacing:0.12em; margin-top:2px; }
+
+    #inside-indicator { position:absolute; top:16px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.1); border-radius:4px; padding:5px 14px; opacity:0; transition:opacity 0.3s; text-align:center; }
+    #inside-label { color:rgba(255,255,255,0.75); font-size:9px; letter-spacing:0.2em; }
+
+    #chromatic-border { position:absolute; inset:0; pointer-events:none; border-radius:0; }
+
+    #scanlines { position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(0deg, rgba(0,0,0,0.04) 0px, rgba(0,0,0,0.04) 1px, transparent 1px, transparent 3px); }
+    #film-grain { position:absolute; inset:0; pointer-events:none; opacity:0.04; background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-size:200px; }
 
     #interact-prompt { position:absolute; bottom:120px; left:50%; transform:translateX(-50%); text-align:center; background:rgba(0,0,0,0.7); border:1px solid rgba(255,255,255,0.15); border-radius:4px; padding:8px 18px; opacity:0; transition:opacity 0.25s; }
     #interact-text { color:rgba(255,255,255,0.85); font-size:11px; letter-spacing:0.15em; }
@@ -72,14 +81,6 @@
     #controls { position:absolute; bottom:10px; left:50%; transform:translateX(-50%); color:rgba(255,255,255,0.35); font-size:8px; letter-spacing:0.2em; white-space:nowrap; }
     #vignette { position:absolute; inset:0; pointer-events:none; }
     #ice-border { position:absolute; inset:0; pointer-events:none; border:2px solid rgba(180,0,0,0); transition:border-color 0.5s; }
-
-    /* Interior overlay */
-    #interior-screen { background:#060810; }
-    #interior-location { color:rgba(255,255,255,0.3); font-size:9px; letter-spacing:0.4em; margin-bottom:24px; }
-    #interior-title { color:#e0e0e0; font-size:18px; letter-spacing:0.15em; margin-bottom:8px; opacity:0; transition:opacity 0.8s; }
-    #interior-task { color:rgba(255,255,255,0.6); font-size:11px; letter-spacing:0.08em; margin-bottom:40px; opacity:0; transition:opacity 0.8s; }
-    #interior-fact { color:rgba(200,70,50,0.85); font-size:10px; letter-spacing:0.05em; max-width:420px; text-align:center; line-height:1.8; margin-bottom:30px; opacity:0; transition:opacity 1.2s; }
-    #interior-prompt { color:rgba(255,255,255,0.45); font-size:9px; letter-spacing:0.3em; opacity:0; transition:opacity 0.8s; }
 
     /* Fade overlay */
     #fade { position:fixed; top:0; left:0; width:100%; height:100%; background:#000; opacity:0; pointer-events:none; z-index:50; transition:opacity 0.5s; }
@@ -117,6 +118,7 @@
     <div id="objective">
       <div id="obj-next">NEXT</div>
       <div id="obj-label"></div>
+      <div id="obj-sublabel"></div>
       <div id="obj-desc"></div>
       <div id="obj-need-phone"></div>
     </div>
@@ -126,9 +128,13 @@
       <canvas id="minimap-canvas" width="120" height="120"></canvas>
       <div id="minimap-label">MAP</div>
     </div>
-    <div id="controls">WASD · Mouse · SHIFT=sprint · CTRL=crouch · SPACE=drop phone · E=enter building</div>
+    <div id="controls">WASD · Mouse · SHIFT=sprint · CTRL=crouch · SPACE=drop phone</div>
+    <div id="inside-indicator"><span id="inside-label"></span></div>
     <div id="vignette"></div>
     <div id="ice-border"></div>
+    <div id="chromatic-border"></div>
+    <div id="scanlines"></div>
+    <div id="film-grain"></div>
   </div>
 
   <!-- Title -->
@@ -145,15 +151,6 @@
     <div id="intro-line2">ICE is buying it.</div>
     <div id="intro-line3">You have errands to run. Get home.</div>
     <div id="intro-prompt">PRESS SPACE TO BEGIN</div>
-  </div>
-
-  <!-- Interior -->
-  <div id="interior-screen" class="screen hidden">
-    <div id="interior-location"></div>
-    <div id="interior-title"></div>
-    <div id="interior-task"></div>
-    <div id="interior-fact"></div>
-    <div id="interior-prompt">PRESS E TO LEAVE</div>
   </div>
 
   <!-- End -->
