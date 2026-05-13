@@ -184,6 +184,11 @@ function makeFloorTex(type) {
   return tex;
 }
 
+// Shared book materials (pre-built, reused across all bookshelves)
+const BOOK_MATS = [0x8b1a1a, 0x1a4a8b, 0x1a7a2a, 0x7a6a1a, 0x5a1a7a].map(
+  c => new THREE.MeshLambertMaterial({ color: c })
+);
+
 // ═══════════════════════════════════════════════════════
 // Interior furniture helpers
 // ═══════════════════════════════════════════════════════
@@ -232,14 +237,13 @@ function addBookshelf(scene, x, z, rotY = 0) {
   const g = new THREE.Group();
   const w = new THREE.MeshLambertMaterial({ color: 0x3a2810 });
   const frame = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.2, 0.32), w); frame.position.set(0, 1.1, 0); g.add(frame);
-  const bColors = [0x8b1a1a, 0x1a4a8b, 0x1a7a2a, 0x7a6a1a, 0x5a1a7a];
   for (let shelf = 0; shelf < 4; shelf++) {
     let bx = -0.55;
     while (bx < 0.55) {
       const bw = 0.04 + Math.random() * 0.08;
       const bh = 0.25 + Math.random() * 0.1;
       const book = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, 0.22),
-        new THREE.MeshLambertMaterial({ color: bColors[Math.floor(Math.random() * bColors.length)] }));
+        BOOK_MATS[Math.floor(Math.random() * BOOK_MATS.length)]);
       book.position.set(bx + bw/2, 0.4 + shelf * 0.45 + bh/2, 0.04); g.add(book);
       bx += bw + 0.004;
     }
@@ -270,8 +274,7 @@ function buildInteriors(scene) {
     ceil.rotation.x = Math.PI / 2; ceil.position.set(x, H - 0.05, z); scene.add(ceil);
 
     const lc = lm.id === 'home' ? 0xffe8b0 : 0xf0f4ff;
-    const pl = new THREE.PointLight(lc, 2.0, Math.max(W, D) * 1.2);
-    pl.position.set(x, H - 0.5, z); scene.add(pl);
+    // Ceiling fixture only — no PointLight (expensive; global ambient lights the interior)
     const fix = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.5), new THREE.MeshBasicMaterial({ color: lc }));
     fix.position.set(x, H - 0.1, z); scene.add(fix);
 
@@ -306,8 +309,7 @@ function buildInteriors(scene) {
       tv.position.set(x - 1.5, 1.0, z - 3.5); scene.add(tv);
       const tvScr = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 0.62), new THREE.MeshBasicMaterial({ color: 0x050a10 }));
       tvScr.position.set(x - 1.5, 1.0, z - 3.47); scene.add(tvScr);
-      const lampLight = new THREE.PointLight(0xffd060, 1.0, 5);
-      lampLight.position.set(x + 2, 1.1, z + 1.3); scene.add(lampLight);
+      // (lamp point light removed — performance)
     }
   });
 }
@@ -332,7 +334,7 @@ function buildLandmark(scene, lm, buildings) {
   }
 
   // Roof
-  scene.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(W, 0.4, D), am), { position: new THREE.Vector3(x, H, z) }));
+  { const m = new THREE.Mesh(new THREE.BoxGeometry(W, 0.4, D), am); m.position.set(x, H, z); scene.add(m); }
 
   // South wall
   if (doorFace === 'south') {
@@ -364,7 +366,7 @@ function buildLandmark(scene, lm, buildings) {
   scene.add(sign);
 
   // Accent stripe
-  scene.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(W, 0.5, D), am), { position: new THREE.Vector3(x, H + 0.6, z) }));
+  { const m = new THREE.Mesh(new THREE.BoxGeometry(W, 0.5, D), am); m.position.set(x, H + 0.6, z); scene.add(m); }
 
   // Destination ring inside building
   const ringMat = new THREE.MeshBasicMaterial({ color: lm.requiresPhone ? 0x2a5a9a : 0x2a6a2a, side: THREE.DoubleSide, transparent: true, opacity: 0.55 });
@@ -440,16 +442,10 @@ function buildCity(scene) {
     new THREE.MeshLambertMaterial({ color: 0x090d14 }));
   ground.rotation.x = -Math.PI / 2; scene.add(ground);
 
-  // Sidewalks
+  // Sidewalks — single large plane instead of 64 individual ones
   const swMat = new THREE.MeshLambertMaterial({ color: 0x111823 });
-  for (let bx = -4; bx <= 3; bx++) {
-    for (let bz = -4; bz <= 3; bz++) {
-      const sw = new THREE.Mesh(new THREE.PlaneGeometry(BLOCK_SIZE + 1.5, BLOCK_SIZE + 1.5), swMat);
-      sw.rotation.x = -Math.PI / 2;
-      sw.position.set(bx * STRIDE + STRIDE / 2, 0.005, bz * STRIDE + STRIDE / 2);
-      scene.add(sw);
-    }
-  }
+  const sw = new THREE.Mesh(new THREE.PlaneGeometry(CITY_SIZE * 2, CITY_SIZE * 2), swMat);
+  sw.rotation.x = -Math.PI / 2; sw.position.set(0, 0.003, 0); scene.add(sw);
 
   // Roads
   const roadMat = new THREE.MeshLambertMaterial({ color: 0x080c12 });
@@ -478,6 +474,15 @@ function buildCity(scene) {
   dashInstV.instanceMatrix.needsUpdate = true; dashInstH.instanceMatrix.needsUpdate = true;
   scene.add(dashInstV); scene.add(dashInstH);
 
+  // Pre-build shared window materials pool (~12 variants instead of one per face)
+  const WIN_MATS = [];
+  const winTexRand = seededRand(77);
+  for (let i = 0; i < 12; i++) {
+    const cols = 2 + Math.floor(winTexRand() * 5);
+    const rows = 3 + Math.floor(winTexRand() * 8);
+    WIN_MATS.push(new THREE.MeshBasicMaterial({ map: makeWinTex(cols, rows, winTexRand) }));
+  }
+
   // Generic buildings
   for (let bx = -4; bx <= 3; bx++) {
     for (let bz = -4; bz <= 3; bz++) {
@@ -488,6 +493,8 @@ function buildCity(scene) {
       const numD = 1 + Math.floor(rand() * 2);
       const bwCell = (BLOCK_SIZE - 2) / numW;
       const bdCell = (BLOCK_SIZE - 2) / numD;
+      // Only show window detail on nearby blocks (inner 6×6); distant blocks are body-only
+      const nearDetail = Math.abs(bx) <= 2 && Math.abs(bz) <= 2;
       for (let wi = 0; wi < numW; wi++) {
         for (let di2 = 0; di2 < numD; di2++) {
           const bWidth  = bwCell * (0.55 + rand() * 0.38);
@@ -495,25 +502,22 @@ function buildCity(scene) {
           const bHeight = BH_MIN + rand() * (BH_MAX - BH_MIN);
           const px = cx - BLOCK_SIZE / 2 + 1 + wi * bwCell + bwCell / 2;
           const pz = cz - BLOCK_SIZE / 2 + 1 + di2 * bdCell + bdCell / 2;
-          const shade = 0.06 + rand() * 0.08;
+          const shade = 0.12 + rand() * 0.10;
           const bodyColor = Math.floor(shade * 0.5 * 255) << 16 | Math.floor(shade * 0.65 * 255) << 8 | Math.floor(shade * 255);
           const mesh = new THREE.Mesh(new THREE.BoxGeometry(bWidth, bHeight, bDepth),
             new THREE.MeshLambertMaterial({ color: bodyColor }));
           mesh.position.set(px, bHeight / 2, pz); scene.add(mesh);
 
-          // Window faces
-          ['south','north','east','west'].forEach(face => {
+          // Window faces — only on nearby blocks; use shared material pool
+          if (nearDetail) ['south','north','east','west'].forEach(face => {
             const isZ = face === 'south' || face === 'north';
             const facePos = face === 'south' ? pz + bDepth/2 + 0.01
               : face === 'north' ? pz - bDepth/2 - 0.01
               : face === 'east' ? px + bWidth/2 + 0.01
               : px - bWidth/2 - 0.01;
             const faceW = isZ ? bWidth : bDepth;
-            const cols = Math.max(1, Math.floor(faceW / 2.2));
-            const rows = Math.max(1, Math.floor(bHeight / 3));
-            const tex = makeWinTex(cols, rows, rand);
-            const wm = new THREE.Mesh(new THREE.PlaneGeometry(faceW, bHeight),
-              new THREE.MeshBasicMaterial({ map: tex }));
+            const winMat = WIN_MATS[Math.floor(rand() * WIN_MATS.length)];
+            const wm = new THREE.Mesh(new THREE.PlaneGeometry(faceW, bHeight), winMat);
             if (isZ) {
               wm.position.set(px, bHeight / 2, facePos);
               wm.rotation.y = face === 'south' ? Math.PI : 0;
@@ -598,12 +602,14 @@ document.getElementById('renderer-container').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x02060f);
-scene.fog = new THREE.FogExp2(0x02060f, 0.016);
+scene.fog = new THREE.FogExp2(0x02060f, 0.022);
 
-scene.add(new THREE.AmbientLight(0x0a1525, 2.5));
-const moonLight = new THREE.DirectionalLight(0x4466aa, 0.7);
+scene.add(new THREE.AmbientLight(0x1a2c48, 5.0));
+const moonLight = new THREE.DirectionalLight(0x4466aa, 0.9);
 moonLight.position.set(80, 120, 60); scene.add(moonLight);
-const hemiLight = new THREE.HemisphereLight(0x0a1a35, 0x050810, 0.8); scene.add(hemiLight);
+const fillLight = new THREE.DirectionalLight(0x1a2a40, 0.5);
+fillLight.position.set(-80, 40, -60); scene.add(fillLight);
+const hemiLight = new THREE.HemisphereLight(0x1a2a45, 0x0a1020, 1.2); scene.add(hemiLight);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 300);
 
@@ -838,6 +844,7 @@ function cacheHUD() {
    'interact-prompt','interact-text','objective','obj-label','obj-sublabel','obj-desc',
    'obj-need-phone','msg-flash','msg-text','vignette','chromatic-border',
    'phone-dot','phone-label','phone-hint','minimap-canvas','inside-indicator','inside-label',
+   'stamina-fill','stamina-value',
   ].forEach(id => { HUD[id] = document.getElementById(id); });
 }
 
@@ -883,8 +890,15 @@ function updateHUD(isSprinting, isCrouching, insideLm) {
       : 'none';
   }
 
-  HUD['status-mode'].textContent = isSprinting ? '▶▶ SPRINT' : isCrouching ? '▼ CROUCH' : '';
-  HUD['status-mode'].style.color = isSprinting ? 'rgba(200,160,50,0.8)' : 'rgba(80,180,120,0.8)';
+  HUD['status-mode'].textContent = isSprinting ? '▶▶ SPRINT' : isCrouching ? '▼ CROUCH' : (!gameState?.canSprint ? '⚠ EXHAUSTED' : '');
+  HUD['status-mode'].style.color = isSprinting ? 'rgba(200,160,50,0.8)' : !gameState?.canSprint ? 'rgba(220,80,50,0.8)' : 'rgba(80,180,120,0.8)';
+
+  if (HUD['stamina-fill'] && gameState) {
+    const sp = gameState.stamina;
+    HUD['stamina-fill'].style.width = sp + '%';
+    HUD['stamina-fill'].style.background = sp > 60 ? 'rgba(80,180,120,0.7)' : sp > 25 ? 'rgba(200,160,50,0.8)' : 'rgba(200,60,40,0.85)';
+    HUD['stamina-value'].textContent = Math.round(sp) + '%';
+  }
 
   // Inside indicator
   if (HUD['inside-indicator'] && HUD['inside-label']) {
@@ -969,7 +983,7 @@ function updateMinimap(s, insideLm) {
   ctx.beginPath(); ctx.arc(ppx, ppy, 4, 0, Math.PI * 2);
   ctx.fillStyle = 'rgba(255,255,255,0.95)'; ctx.fill();
   ctx.beginPath(); ctx.moveTo(ppx, ppy);
-  ctx.lineTo(ppx + Math.sin(-player.yaw) * 11, ppy + Math.cos(-player.yaw) * 11);
+  ctx.lineTo(ppx - Math.sin(player.yaw) * 11, ppy - Math.cos(player.yaw) * 11);
   ctx.strokeStyle = 'rgba(255,255,255,0.65)'; ctx.lineWidth = 1.5; ctx.stroke();
 }
 
@@ -1002,6 +1016,7 @@ function startGame() {
     currentDestIndex: 0, gameOver: false, frame: 0,
     lastMsg: 'Walk into the glowing buildings. SPACE = drop phone.',
     lastMsgTimer: 6,
+    stamina: 100, canSprint: true,
   };
 
   spawnCooldown = 0;
@@ -1019,7 +1034,7 @@ function startGame() {
     if (!s || s.gameOver || STATE !== 'PLAYING') { renderer.render(scene, camera); return; }
     s.frame++;
 
-    const isSprinting = (keys['ShiftLeft'] || keys['ShiftRight']) && !keys['ControlLeft'] && !keys['ControlRight'] && !keys['KeyC'];
+    const wantSprint = (keys['ShiftLeft'] || keys['ShiftRight']) && !keys['ControlLeft'] && !keys['ControlRight'] && !keys['KeyC'];
     const isCrouching = keys['ControlLeft'] || keys['ControlRight'] || keys['KeyC'];
     let mx = 0, mz = 0;
     if (keys['KeyW'] || keys['ArrowUp'])    { mx -= Math.sin(player.yaw); mz -= Math.cos(player.yaw); }
@@ -1028,6 +1043,17 @@ function startGame() {
     if (keys['KeyD'] || keys['ArrowRight']) { mx += Math.cos(player.yaw); mz -= Math.sin(player.yaw); }
 
     const isMoving = mx !== 0 || mz !== 0;
+
+    // Stamina: drain when sprinting+moving, regen otherwise
+    if (!s.canSprint && s.stamina >= 30) s.canSprint = true;
+    const isSprinting = wantSprint && s.canSprint && isMoving;
+    if (isSprinting) {
+      s.stamina = Math.max(0, s.stamina - 28 * delta);
+      if (s.stamina <= 0) s.canSprint = false;
+    } else {
+      s.stamina = Math.min(100, s.stamina + 14 * delta);
+    }
+
     if (isMoving) {
       const len = Math.sqrt(mx * mx + mz * mz);
       const mult = isSprinting ? PLAYER_SPRINT_MULT : isCrouching ? PLAYER_CROUCH_MULT : 1.0;

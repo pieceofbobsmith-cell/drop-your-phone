@@ -50,6 +50,12 @@
     #phone-dot { width:8px; height:8px; border-radius:50%; background:rgba(255,255,255,0.35); transition:background 0.4s; }
     #phone-hint { color:rgba(255,255,255,0.45); font-size:8px; margin-top:3px; }
 
+    #stamina-wrap { position:absolute; top:82px; right:16px; background:rgba(0,0,0,0.55); border:1px solid rgba(255,255,255,0.06); border-radius:4px; padding:7px 12px; width:120px; }
+    #stamina-header { display:flex; justify-content:space-between; margin-bottom:4px; }
+    #stamina-label, #stamina-value { color:rgba(255,255,255,0.6); font-size:9px; letter-spacing:0.2em; }
+    #stamina-track { height:3px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden; }
+    #stamina-fill { height:100%; border-radius:2px; transition:width 0.1s, background 0.3s; width:100%; background:rgba(80,180,120,0.7); }
+
     #status-wrap { position:absolute; bottom:100px; right:16px; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.05); border-radius:4px; padding:6px 10px; text-align:right; }
     #status-mode { color:rgba(255,255,255,0.5); font-size:8px; letter-spacing:0.2em; height:12px; }
 
@@ -113,6 +119,10 @@
     <div id="phone-wrap">
       <div id="phone-row"><span id="phone-label">PHONE ON</span><div id="phone-dot"></div></div>
       <div id="phone-hint">SPACE = drop phone</div>
+    </div>
+    <div id="stamina-wrap">
+      <div id="stamina-header"><span id="stamina-label">STAMINA</span><span id="stamina-value">100%</span></div>
+      <div id="stamina-track"><div id="stamina-fill"></div></div>
     </div>
     <div id="status-wrap"><div id="status-mode"></div></div>
     <div id="objective">
