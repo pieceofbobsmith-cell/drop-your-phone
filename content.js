@@ -1,9 +1,8 @@
 // content.js — injected into every page at document_idle
 // Detects and dismisses cookie consent banners.
-// Sends TRACKER_BLOCKED to background when successful.
-// Listens for SHOW_TOAST from background and injects a styled notification.
+// Sends TRACKER_BLOCKED to background to increment the counter/badge.
 
-let toastShown = false;
+let alreadyBlocked = false; // set synchronously the moment we click — guards observer re-entry
 
 // Check if blocking is enabled before scanning
 chrome.runtime.sendMessage({ type: 'GET_STATE' }, (response) => {
@@ -14,16 +13,9 @@ chrome.runtime.sendMessage({ type: 'GET_STATE' }, (response) => {
   }
 });
 
-// Listen for toast trigger sent back from background.js
-chrome.runtime.onMessage.addListener((message) => {
-  if (message.type === 'SHOW_TOAST' && !toastShown) {
-    toastShown = true;
-    showToast();
-  }
-});
-
 // Try each framework in order, stop at first match
 function scanAndBlock() {
+  if (alreadyBlocked) return;
   if (tryOneTrust()) return;
   if (tryCookiebot()) return;
   if (tryTrustArc()) return;
@@ -31,20 +23,18 @@ function scanAndBlock() {
 }
 
 function tryOneTrust() {
-  // Prefer "necessary only" button; fall back to reject-all
   const btn = document.querySelector(
     '.ot-pc-refuse-all-handler, #onetrust-reject-all-handler'
   );
-  if (btn) { btn.click(); notifyBlocked(); return true; }
+  if (btn) { clickAndBlock(btn); return true; }
   return false;
 }
 
 function tryCookiebot() {
-  // "Allow necessary only" = decline non-essential
   const btn = document.querySelector(
     '#CybotCookiebotDialogBodyLevelButtonLevelOptinDeclineAll, #CybotCookiebotDialogBodyButtonDecline'
   );
-  if (btn) { btn.click(); notifyBlocked(); return true; }
+  if (btn) { clickAndBlock(btn); return true; }
   return false;
 }
 
@@ -52,12 +42,18 @@ function tryTrustArc() {
   const btn = document.querySelector(
     '.trustarc-decline-btn, .pdynamicbutton .call'
   );
-  if (btn) { btn.click(); notifyBlocked(); return true; }
+  if (btn) { clickAndBlock(btn); return true; }
   return false;
 }
 
+function isVisible(el) {
+  const r = el.getBoundingClientRect();
+  if (r.width === 0 || r.height === 0) return false;
+  const s = window.getComputedStyle(el);
+  return s.display !== 'none' && s.visibility !== 'hidden' && parseFloat(s.opacity) > 0;
+}
+
 function tryGeneric() {
-  // Prefer "necessary/essential only" text first, then fall back to reject/decline
   const preferredKeywords = [
     'necessary only', 'essential only', 'accept necessary',
     'accept essential', 'only necessary', 'only essential',
@@ -69,36 +65,36 @@ function tryGeneric() {
   ];
   const candidates = Array.from(
     document.querySelectorAll('button, [role="button"], a')
-  );
-  // First pass: necessary/essential only buttons
+  ).filter(isVisible);
   for (const el of candidates) {
     const text = el.textContent.toLowerCase().trim();
     if (preferredKeywords.some(k => text.includes(k))) {
-      el.click();
-      notifyBlocked();
+      clickAndBlock(el);
       return true;
     }
   }
-  // Second pass: reject/decline all buttons
   for (const el of candidates) {
     const text = el.textContent.toLowerCase().trim();
     if (fallbackKeywords.some(k => text.includes(k))) {
-      el.click();
-      notifyBlocked();
+      clickAndBlock(el);
       return true;
     }
   }
   return false;
 }
 
-function notifyBlocked() {
-  chrome.runtime.sendMessage({ type: 'TRACKER_BLOCKED' });
+function clickAndBlock(btn) {
+  alreadyBlocked = true; // set synchronously — stops the observer from re-entering
+  btn.click();
+  chrome.runtime.sendMessage({ type: 'TRACKER_BLOCKED' }); // increments badge/count
+  showToast(); // show immediately — don't wait for async round-trip from background
 }
 
 // Watch for dynamically injected banners (many sites load them after DOMContentLoaded)
 function observeForBanners() {
   const observer = new MutationObserver(() => {
-    if (!toastShown) scanAndBlock();
+    if (alreadyBlocked) { observer.disconnect(); return; }
+    scanAndBlock();
   });
   observer.observe(document.body, { childList: true, subtree: true });
   // Disconnect after 10 seconds — banner has loaded by then or not at all
@@ -106,7 +102,6 @@ function observeForBanners() {
 }
 
 function showToast() {
-  // Remove any existing toast
   const old = document.getElementById('__drop-phone-toast__');
   if (old) old.remove();
 

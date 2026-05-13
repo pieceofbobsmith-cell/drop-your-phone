@@ -896,18 +896,6 @@
   });
 
   // ── Flow ──────────────────────────────────────────────────────────
-  function beginFlow() {
-    idleState.style.display = 'none';
-    allBrokersList.style.display = 'block';
-    progressBox.classList.add('show');
-    startBtn.disabled = true;
-    startBtn.textContent = '✓ STARTED — work through the list →';
-    resetBtn.classList.remove('hidden');
-    buildChips();
-    showBroker(currentIndex);
-    updateProgress();
-  }
-
   function showBroker(index) {
     if (index >= BROKERS.length) { showComplete(); return; }
     currentIndex = index;

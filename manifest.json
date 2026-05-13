@@ -1,9 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Drop Your Phone",
-  "version": "1.0",
+  "version": "1.1",
+  "minimum_chrome_version": "109",
   "description": "Block trackers. Experience surveillance. A social justice art piece about ICE and data brokers.",
-  "permissions": ["activeTab", "scripting", "storage", "tabs"],
+  "permissions": ["activeTab", "alarms", "scripting", "storage", "tabs"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"

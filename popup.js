@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const cityEl      = document.getElementById('ooCity');
   const stateEl     = document.getElementById('ooState');
   const startBtn    = document.getElementById('startOptoutBtn');
+  const pauseBtn    = document.getElementById('pauseOptoutBtn');
   const redoBtn     = document.getElementById('redoOptoutBtn');
   const brokerList  = document.getElementById('brokerList');
   const erasedMsg   = document.getElementById('erasedMsg');
@@ -52,6 +53,13 @@ document.addEventListener('DOMContentLoaded', () => {
       startBtn.textContent = '\u2713 ERASED FROM ' + autoCount + ' DATABASES';
       showErasedMessage(autoCount);
       redoBtn.classList.remove('hidden');
+      // Show pause/resume state if queue is still running
+      chrome.runtime.sendMessage({ type: 'GET_QUEUE_STATE' }, (r) => {
+        if (r && r.remaining > 0) {
+          pauseBtn.classList.remove('hidden');
+          pauseBtn.textContent = r.paused ? '\u25b6 RESUME' : '\u23f8 PAUSE';
+        }
+      });
     }
   });
 
@@ -100,11 +108,26 @@ document.addEventListener('DOMContentLoaded', () => {
     renderBrokerList(statuses);
     startBtn.textContent = '\u2713 ERASED FROM ' + autoCount + ' DATABASES';
     showErasedMessage(autoCount);
+    pauseBtn.classList.remove('hidden');
+    pauseBtn.textContent = '\u23f8 PAUSE';
     redoBtn.classList.remove('hidden');
+  });
+
+  pauseBtn.addEventListener('click', () => {
+    const isPaused = pauseBtn.textContent.includes('RESUME');
+    if (isPaused) {
+      chrome.runtime.sendMessage({ type: 'RESUME_QUEUE' });
+      pauseBtn.textContent = '\u23f8 PAUSE';
+    } else {
+      chrome.runtime.sendMessage({ type: 'PAUSE_QUEUE' });
+      pauseBtn.textContent = '\u25b6 RESUME';
+    }
   });
 
   // ── Redo opt-out ──────────────────────────────────────────────────
   redoBtn.addEventListener('click', () => {
+    // Stop the background queue and close any open opt-out tab
+    chrome.runtime.sendMessage({ type: 'CLEAR_QUEUE' });
     chrome.storage.local.remove(['optoutStatus']);
     brokerList.classList.add('hidden');
     brokerList.innerHTML = '';
@@ -112,6 +135,8 @@ document.addEventListener('DOMContentLoaded', () => {
     erasedMsg.innerHTML = '';
     startBtn.disabled = false;
     startBtn.textContent = '\u26A1 ERASE ME FROM ALL OF THEM';
+    pauseBtn.classList.add('hidden');
+    pauseBtn.textContent = '\u23f8 PAUSE';
     redoBtn.classList.add('hidden');
     firstNameEl.focus();
   });
