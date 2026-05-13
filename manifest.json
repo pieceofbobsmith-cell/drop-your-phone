@@ -1,11 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Drop Your Phone",
-  "version": "1.1",
+  "version": "0.1.0",
   "minimum_chrome_version": "109",
-  "description": "Block trackers. Experience surveillance. A social justice art piece about ICE and data brokers.",
+  "description": "Block cookie trackers and opt out of data brokers. A social justice art piece about ICE and data broker surveillance.",
   "permissions": ["activeTab", "alarms", "scripting", "storage", "tabs"],
-  "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
   },
@@ -17,6 +16,7 @@
     },
     {
       "matches": [
+        "https://suppression.peopleconnect.us/*",
         "https://www.beenverified.com/app/optout/*",
         "https://www.peoplelooker.com/app/optout/*",
         "https://www.backgroundalert.com/optout/*",
@@ -73,6 +73,7 @@
         "https://www.locatefamily.com/optout*",
         "https://isapps.acxiom.com/optout/*",
         "https://www.zabasearch.com/block_records/*",
+        "https://mylife.jotform.com/*",
         "https://www.mylife.com/ccpa/*",
         "https://www.addresses.com/optout*",
         "https://www.idcrawl.com/opt-out*",
@@ -80,6 +81,7 @@
         "https://www.searchbug.com/opt-out/*",
         "https://www.spokeo.com/optout*",
         "https://www.whitepages.com/suppression-requests*",
+        "https://radaris.com/control-privacy*",
         "https://radaris.com/ng/page/how-to-remove*",
         "https://www.peoplefinder.com/people_removal/*",
         "https://www.peekyou.com/about/contact/optout/*",

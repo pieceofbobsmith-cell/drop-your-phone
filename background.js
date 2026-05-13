@@ -81,10 +81,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ success: true });
   }
 
-  // Popup sends the full list of auto-broker URLs to process
+  // Popup sends the queue — each item is { url, emailOnly }
   if (message.type === 'START_OPTOUT_QUEUE') {
     optoutPaused = false;
-    chrome.storage.local.set({ optoutQueue: message.urls, optoutPaused: false }, openNextOptout);
+    chrome.storage.local.set({ optoutQueue: message.queue, optoutPaused: false }, openNextOptout);
   }
 
   if (message.type === 'PAUSE_QUEUE') {
@@ -117,6 +117,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ success: true });
   }
 
+  // optout.js started filling — cancel the forced-close alarm so CAPTCHA
+  // or slow React rendering doesn't cause the tab to close mid-fill.
+  // A generous 15-min replacement alarm is set so abandoned tabs still close.
+  if (message.type === 'FILLING_STARTED') {
+    chrome.alarms.clear('optoutTabClose');
+    chrome.alarms.create('optoutTabClose', { delayInMinutes: 15 });
+  }
+
   // optout.js signals it's done — remove the tab (onRemoved opens the next)
   if (message.type === 'CLOSE_ME' && sender.tab) {
     chrome.tabs.remove(sender.tab.id).catch(() => {});
@@ -127,10 +135,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 function openNextOptout() {
   chrome.storage.local.get(['optoutQueue', 'optoutTabId'], ({ optoutQueue, optoutTabId: storedTabId }) => {
-    // Sync in-memory state with storage (handles SW kill/restart)
+    // Sync in-memory state with storage (handles SW kill/restart).
+    // Verify the tab actually exists — stale storage entry (race) would stall the queue.
     if (storedTabId) {
-      optoutTabId = storedTabId;
-      return; // Tab still open, wait for it to close
+      chrome.tabs.get(storedTabId, (tab) => {
+        if (chrome.runtime.lastError || !tab) {
+          // Tab is gone; clear stale storage and continue
+          optoutTabId = null;
+          chrome.storage.local.remove(['optoutTabId']);
+          chrome.alarms.clear('optoutTabClose');
+          openNextOptout();
+        } else {
+          optoutTabId = storedTabId; // Tab still alive — wait for it
+        }
+      });
+      return;
     }
     optoutTabId = null;
 
@@ -140,13 +159,17 @@ function openNextOptout() {
       return;
     }
     const [next, ...rest] = optoutQueue;
+    const url = typeof next === 'string' ? next : next.url;
+    // Email-only brokers (just email field, no name search) run fully in background.
+    // Search-first brokers open in the foreground so the user can select their record.
+    const emailOnly = typeof next === 'object' ? !!next.emailOnly : false;
     chrome.storage.local.set({ optoutQueue: rest }, () => {
-      chrome.tabs.create({ url: next, active: false }, (tab) => {
+      chrome.tabs.create({ url, active: !emailOnly }, (tab) => {
         optoutTabId = tab.id;
-        // Persist so onRemoved can match it after a SW restart
         chrome.storage.local.set({ optoutTabId: tab.id });
-        // Background-level guaranteed close: 15s covers redirect + no-form cases
-        chrome.alarms.create('optoutTabClose', { delayInMinutes: 0.25 });
+        // Email-only: 1 min fallback (optout.js closes it after ~8s on success)
+        // Search-first: 10 min so user has time to find + select their record
+        chrome.alarms.create('optoutTabClose', { delayInMinutes: emailOnly ? 1 : 10 });
       });
     });
   });
