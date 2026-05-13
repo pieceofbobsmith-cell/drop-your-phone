@@ -304,6 +304,37 @@ input:checked + .slider:before { background: #4fc3f7; transform: translateX(18px
   font-size: 10px;
 }
 
+.section-search {
+  background: #0a0a1a;
+  color: #a080ff;
+  border-left: 3px solid #6040cc;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.search-broker-list { border-top: none; }
+
+.search-broker-hint {
+  padding: 5px 8px 7px;
+  font-size: 9px;
+  color: #7060aa;
+  line-height: 1.6;
+  background: #080810;
+  border-bottom: 1px solid #12101e;
+  font-family: monospace;
+}
+
+.broker-badge-search {
+  font-size: 8px;
+  color: #7060cc;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: #0a0818;
+  padding: 1px 5px;
+  border-radius: 2px;
+  border: 1px solid #2a1a5a;
+}
+
 .toggle-auto {
   cursor: pointer;
   opacity: 0.7;

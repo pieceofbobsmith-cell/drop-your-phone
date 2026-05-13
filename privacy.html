@@ -88,19 +88,17 @@
 
 <h2>The Game</h2>
 <p>
-  The included browser game ("Signal") runs entirely locally in your browser.
-  It does not connect to any network, collect any information, or interact
-  with any external service.
+  The PLAY button links to an external webpage (bytetobuild3d.com/game).
+  The game runs entirely in your browser and does not collect any information.
 </p>
 
 <h2>Permissions Explained</h2>
 <ul>
-  <li><strong>activeTab</strong> — to interact with the current tab for cookie banner dismissal</li>
+  <li><strong>activeTab</strong> — to inject the cookie banner blocker into the current tab when you open the extension popup</li>
   <li><strong>alarms</strong> — to guarantee opt-out tabs close within a fixed time even if a site redirects or shows a CAPTCHA, so the queue never stalls</li>
-  <li><strong>scripting</strong> — to inject the cookie banner blocker and opt-out form filler</li>
+  <li><strong>scripting</strong> — to inject the cookie banner blocker into the active tab on demand</li>
   <li><strong>storage</strong> — to save your opt-out profile and settings locally on your device</li>
   <li><strong>tabs</strong> — to open data broker opt-out pages in background tabs</li>
-  <li><strong>host_permissions (&lt;all_urls&gt;)</strong> — required to dismiss cookie banners on any website you visit</li>
 </ul>
 
 <h2>Data Deletion</h2>

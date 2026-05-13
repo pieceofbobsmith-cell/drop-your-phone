@@ -8,37 +8,63 @@ document.addEventListener('DOMContentLoaded', () => {
   const emailEl     = document.getElementById('ooEmail');
   const cityEl      = document.getElementById('ooCity');
   const stateEl     = document.getElementById('ooState');
+  const streetEl    = document.getElementById('ooStreet');
+  const zipEl       = document.getElementById('ooZip');
+  const phoneEl     = document.getElementById('ooPhone');
   const startBtn    = document.getElementById('startOptoutBtn');
   const pauseBtn    = document.getElementById('pauseOptoutBtn');
   const redoBtn     = document.getElementById('redoOptoutBtn');
   const brokerList  = document.getElementById('brokerList');
   const erasedMsg   = document.getElementById('erasedMsg');
 
-  // Show real broker counts in the manifesto
-  const autoCount   = BROKERS.filter(b => !b.manual).length;
-  const manualCount = BROKERS.filter(b => b.manual).length;
-  const totalCount  = BROKERS.length;
-  const countEl2    = document.getElementById('protestBrokerCount');
-  if (countEl2) countEl2.textContent = totalCount;
+  // Three categories of brokers.
+  // `covered` = handled by another broker in the queue (e.g. PeopleConnect network sites
+  //   covered by the suppression.peopleconnect.us entry). Don't open separate tabs.
+  const emailOnlyBrokers   = BROKERS.filter(b => !b.manual && !b.covered && b.emailOnly === true);
+  const searchFirstBrokers = BROKERS.filter(b => !b.manual && !b.covered && b.emailOnly !== true);
+  const manualBrokers      = BROKERS.filter(b => b.manual);
+
+  // Show total count in manifesto
+  const countEl2 = document.getElementById('protestBrokerCount');
+  if (countEl2) countEl2.textContent = BROKERS.length;
+
+  // ── Inject cookie blocker into current tab (uses activeTab — no broad host_permissions needed)
+  function injectContentScript() {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (!tabs[0]) return;
+      chrome.scripting.executeScript({
+        target: { tabId: tabs[0].id, allFrames: true },
+        files: ['content.js']
+      }).catch(() => {}); // Silently ignore chrome://, extension pages, etc.
+    });
+  }
 
   // ── Tracker blocking ──────────────────────────────────────────────
   chrome.runtime.sendMessage({ type: 'GET_STATE' }, (response) => {
     if (response) {
       toggle.checked = response.blockingEnabled !== false;
       countEl.textContent = response.blockedCount || 0;
+      if (response.blockingEnabled !== false) injectContentScript();
+    }
+  });
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.blockedCount !== undefined) {
+      countEl.textContent = changes.blockedCount.newValue || 0;
     }
   });
 
   toggle.addEventListener('change', () => {
     chrome.runtime.sendMessage({ type: 'SET_BLOCKING', enabled: toggle.checked });
+    if (toggle.checked) injectContentScript();
   });
 
   playBtn.addEventListener('click', () => {
-    chrome.tabs.create({ url: chrome.runtime.getURL('game.html') });
+    chrome.tabs.create({ url: 'https://bytetobuild3d.com/game' });
     window.close();
   });
 
-  // ── Opt-out: restore saved profile and previous statuses ─────────
+  // ── Restore saved profile and status ─────────────────────────────
   chrome.storage.local.get(['optoutProfile', 'optoutStatus'], ({ optoutProfile, optoutStatus }) => {
     if (optoutProfile) {
       firstNameEl.value = optoutProfile.firstName || '';
@@ -46,14 +72,15 @@ document.addEventListener('DOMContentLoaded', () => {
       emailEl.value     = optoutProfile.email     || '';
       cityEl.value      = optoutProfile.city      || '';
       stateEl.value     = optoutProfile.state     || '';
+      streetEl.value    = optoutProfile.street    || '';
+      zipEl.value       = optoutProfile.zip       || '';
+      phoneEl.value     = optoutProfile.phone     || '';
     }
     if (optoutStatus) {
       renderBrokerList(optoutStatus);
       startBtn.disabled = true;
-      startBtn.textContent = '\u2713 ERASED FROM ' + autoCount + ' DATABASES';
-      showErasedMessage(autoCount);
+      startBtn.textContent = '\u26a1 RUNNING \u2014 close each tab when done';
       redoBtn.classList.remove('hidden');
-      // Show pause/resume state if queue is still running
       chrome.runtime.sendMessage({ type: 'GET_QUEUE_STATE' }, (r) => {
         if (r && r.remaining > 0) {
           pauseBtn.classList.remove('hidden');
@@ -65,49 +92,65 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ── Auto-save profile as user types ──────────────────────────────
   let saveTimer;
-  [firstNameEl, lastNameEl, emailEl, cityEl, stateEl].forEach(el => {
+  [firstNameEl, lastNameEl, emailEl, cityEl, stateEl, streetEl, zipEl, phoneEl].forEach(el => {
     el.addEventListener('input', () => {
       clearTimeout(saveTimer);
       saveTimer = setTimeout(() => {
-        chrome.storage.local.set({ optoutProfile: {
-          firstName: firstNameEl.value.trim(),
-          lastName:  lastNameEl.value.trim(),
-          email:     emailEl.value.trim(),
-          city:      cityEl.value.trim(),
-          state:     stateEl.value.trim().toUpperCase(),
-        }});
+        chrome.storage.local.set({ optoutProfile: buildProfile() });
       }, 400);
     });
   });
 
-  // ── Start opt-out ─────────────────────────────────────────────────
-  startBtn.addEventListener('click', () => {
-    const profile = {
+  function buildProfile() {
+    return {
       firstName: firstNameEl.value.trim(),
       lastName:  lastNameEl.value.trim(),
       email:     emailEl.value.trim(),
       city:      cityEl.value.trim(),
       state:     stateEl.value.trim().toUpperCase(),
+      street:    streetEl.value.trim(),
+      zip:       zipEl.value.trim(),
+      phone:     phoneEl.value.trim(),
     };
+  }
+
+  // ── Start opt-out ─────────────────────────────────────────────────
+  startBtn.addEventListener('click', () => {
+    const profile = buildProfile();
     if (!profile.firstName || !profile.lastName) {
       firstNameEl.focus();
       return;
     }
+    if (!profile.email) {
+      emailEl.focus();
+      return;
+    }
     startBtn.disabled = true;
+    startBtn.textContent = '\u26a1 RUNNING \u2014 close each tab when done';
 
-    // Build statuses: auto brokers → 'sent', manual → 'idle'
     const statuses = {};
-    BROKERS.forEach(b => { statuses[b.id] = b.manual ? 'idle' : 'sent'; });
+    BROKERS.forEach(b => { statuses[b.id] = b.manual ? 'idle' : 'queued'; });
     chrome.storage.local.set({ optoutProfile: profile, optoutStatus: statuses });
 
-    // Queue all auto-fill brokers — background.js opens them one at a time,
-    // each fills+submits+closes before the next one opens
-    const autoUrls = BROKERS.filter(b => !b.manual).map(b => b.url);
-    chrome.runtime.sendMessage({ type: 'START_OPTOUT_QUEUE', urls: autoUrls });
+    // Email-only brokers run fully in the background (they auto-close).
+    // Search-first brokers open in the foreground one at a time — user picks
+    // their record, then closes the tab to trigger the next one.
+    // Sort email-only first so background ones finish before foreground ones start.
+    const autoQueue = [
+      ...emailOnlyBrokers.map(b =>   ({ url: b.url, emailOnly: true  })),
+      ...searchFirstBrokers.map(b => ({ url: b.url, emailOnly: false })),
+    ];
+    chrome.runtime.sendMessage({ type: 'START_OPTOUT_QUEUE', queue: autoQueue });
 
     renderBrokerList(statuses);
-    startBtn.textContent = '\u2713 ERASED FROM ' + autoCount + ' DATABASES';
-    showErasedMessage(autoCount);
+    erasedMsg.classList.remove('hidden');
+    erasedMsg.innerHTML =
+      '<div class="erased-headline">\u26a1 OPT-OUTS RUNNING</div>'
+      + '<div class="erased-body">'
+      + emailOnlyBrokers.length + ' sites are auto-submitting in the background.<br>'
+      + searchFirstBrokers.length + ' sites will open one at a time \u2014 '
+      + 'each fills the search form automatically. You pick your record, click Opt Out, then close the tab.'
+      + '</div>';
     pauseBtn.classList.remove('hidden');
     pauseBtn.textContent = '\u23f8 PAUSE';
     redoBtn.classList.remove('hidden');
@@ -124,9 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ── Redo opt-out ──────────────────────────────────────────────────
   redoBtn.addEventListener('click', () => {
-    // Stop the background queue and close any open opt-out tab
     chrome.runtime.sendMessage({ type: 'CLEAR_QUEUE' });
     chrome.storage.local.remove(['optoutStatus']);
     brokerList.classList.add('hidden');
@@ -141,64 +182,67 @@ document.addEventListener('DOMContentLoaded', () => {
     firstNameEl.focus();
   });
 
-  // ── Helpers ───────────────────────────────────────────────────────
+  // ── Render broker list (three sections) ──────────────────────────
   function esc(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  function showErasedMessage(n) {
-    erasedMsg.classList.remove('hidden');
-    erasedMsg.innerHTML =
-      '<div class="erased-headline">\u2713 ' + n + ' OPT-OUTS SENT.</div>'
-      + '<div class="erased-body">They commodified your existence.'
-      + ' They sold your location, your relatives, your past.<br>'
-      + ' You just took yourself back from all of them.</div>';
-  }
-
-  // ── Render broker list (two sections) ────────────────────────────
   function renderBrokerList(statuses) {
     brokerList.classList.remove('hidden');
+    let html = '';
 
-    const manualBrokers = BROKERS.filter(b => b.manual);
-    const autoBrokers   = BROKERS.filter(b => !b.manual);
-
-    // ── MANUAL section ──
-    let html = '<div class="section-header section-manual">'
-      + '\u26A0 ' + manualBrokers.length + ' SITES STILL HAVE YOUR DATA \u2014 FINISH THESE'
-      + '</div>';
-
-    manualBrokers.forEach(b => {
-      const opened = statuses[b.id] === 'opened';
-      html += '<div class="broker-row-manual" data-id="' + esc(b.id) + '" data-url="' + esc(b.url) + '">'
-        + '<span class="broker-name-manual">' + esc(b.name) + '</span>'
-        + '<button class="open-btn' + (opened ? ' open-btn-done' : '') + '" data-id="' + esc(b.id) + '" data-url="' + esc(b.url) + '">'
-          + (opened ? '\u2713 opened' : 'Open \u2192')
-        + '</button>'
-        + '</div>'
-        + '<div class="broker-instructions-manual">'
-        + esc(b.instructions || '')
+    // ── SECTION 1: Manual ──
+    if (manualBrokers.length) {
+      html += '<div class="section-header section-manual">'
+        + '\u26A0 ' + manualBrokers.length + ' SITES — DO THESE YOURSELF'
         + '</div>';
-    });
+      manualBrokers.forEach(b => {
+        const opened = statuses[b.id] === 'opened';
+        html += '<div class="broker-row-manual" >'
+          + '<span class="broker-name-manual">' + esc(b.name) + '</span>'
+          + '<button class="open-btn' + (opened ? ' open-btn-done' : '') + '" data-id="' + esc(b.id) + '" data-url="' + esc(b.url) + '">'
+            + (opened ? '\u2713 opened' : 'Open \u2192')
+          + '</button>'
+          + '</div>'
+          + '<div class="broker-instructions-manual">' + esc(b.instructions || '') + '</div>';
+      });
+    }
 
-    // ── AUTO section ──
-    const autoCount = autoBrokers.length;
-    html += '<div class="section-header section-auto" id="autoSectionHeader">'
-      + '\u2713 ERASED FROM ' + autoBrokers.length + ' DATABASES '
-      + '<span class="toggle-auto" id="toggleAutoBtn">see list \u25be</span>'
-      + '</div>';
-
-    html += '<div class="auto-broker-list hidden" id="autoBrokerList">';
-    autoBrokers.forEach(b => {
-      html += '<div class="broker-row-auto">'
-        + '<span class="broker-name-auto">' + esc(b.name) + '</span>'
-        + '<span class="broker-badge-sent">sent</span>'
+    // ── SECTION 2: Search-first ──
+    if (searchFirstBrokers.length) {
+      html += '<div class="section-header section-search">'
+        + '\u23f3 ' + searchFirstBrokers.length + ' SITES \u2014 WE FILL THE FORM, YOU PICK YOUR RECORD'
         + '</div>';
-    });
-    html += '</div>';
+      html += '<div class="search-broker-list">';
+      searchFirstBrokers.forEach(b => {
+        html += '<div class="broker-row-auto">'
+          + '<span class="broker-name-auto">' + esc(b.name) + '</span>'
+          + '<span class="broker-badge-search">auto-search</span>'
+          + '</div>';
+      });
+      html += '</div>';
+      html += '<div class="search-broker-hint">Each site opens in a new tab. The form is pre-filled \u2014 click Search, find your name, click Opt Out, then close the tab. The next site opens automatically.</div>';
+    }
+
+    // ── SECTION 3: Email-only (auto) ──
+    if (emailOnlyBrokers.length) {
+      html += '<div class="section-header section-auto" id="autoSectionHeader">'
+        + '\u2713 ' + emailOnlyBrokers.length + ' SITES AUTO-SUBMITTED '
+        + '<span class="toggle-auto" id="toggleAutoBtn">see list \u25be</span>'
+        + '</div>';
+      html += '<div class="auto-broker-list hidden" id="autoBrokerList">';
+      emailOnlyBrokers.forEach(b => {
+        html += '<div class="broker-row-auto">'
+          + '<span class="broker-name-auto">' + esc(b.name) + '</span>'
+          + '<span class="broker-badge-sent">sent</span>'
+          + '</div>';
+      });
+      html += '</div>';
+    }
 
     brokerList.innerHTML = html;
 
-    // Open-button click handlers for manual brokers
+    // Open-button handlers for manual brokers
     brokerList.querySelectorAll('.open-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         if (btn.classList.contains('open-btn-done')) return;
@@ -221,8 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
       toggleBtn.addEventListener('click', () => {
         autoList.classList.toggle('hidden');
         toggleBtn.textContent = autoList.classList.contains('hidden')
-          ? 'show list \u25be'
-          : 'hide list \u25b4';
+          ? 'see list \u25be' : 'hide list \u25b4';
       });
     }
   }

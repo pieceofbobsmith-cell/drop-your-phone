@@ -55,7 +55,12 @@
       <input class="optout-input" id="ooEmail"     type="email" placeholder="Email"      autocomplete="email">
       <div class="optout-row">
         <input class="optout-input" id="ooCity"  type="text" placeholder="City"  autocomplete="address-level2">
-        <input class="optout-input" id="ooState" type="text" placeholder="State" autocomplete="address-level1" maxlength="2">
+        <input class="optout-input" id="ooState" type="text" placeholder="State (2-letter)" autocomplete="address-level1" maxlength="2">
+      </div>
+      <input class="optout-input" id="ooStreet" type="text" placeholder="Street address (optional)" autocomplete="street-address">
+      <div class="optout-row">
+        <input class="optout-input" id="ooZip"   type="text" placeholder="ZIP" autocomplete="postal-code" maxlength="10">
+        <input class="optout-input" id="ooPhone" type="tel"  placeholder="Phone (optional)" autocomplete="tel">
       </div>
       <button id="startOptoutBtn">&#9889; ERASE ME FROM ALL OF THEM</button>
       <button id="pauseOptoutBtn" class="hidden">&#9646;&#9646; PAUSE</button>
