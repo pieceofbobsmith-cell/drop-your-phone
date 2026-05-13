@@ -6,20 +6,44 @@ Everything you need to copy-paste into the Chrome Web Store developer console.
 
 ## Before You Submit
 
-1. **Host the privacy policy** — push the repo to GitHub and make it public,
-   then the privacy policy URL will be:
-   `https://pieceofbobsmith-cell.github.io/drop-your-phone/privacy.html`
-   (or deploy `privacy.html` anywhere and use that URL)
+1. **Host the privacy policy** — Enable GitHub Pages on this repo:
+   - Go to github.com/pieceofbobsmith-cell/drop-your-phone → Settings → Pages
+   - Source: Deploy from branch → main → / (root) → Save
+   - Wait ~2 minutes. Privacy policy will live at:
+     `https://pieceofbobsmith-cell.github.io/drop-your-phone/privacy.html`
+   - Paste that URL in the Chrome Web Store "Privacy policy URL" field.
 
 2. **Take screenshots** — load the extension unpacked in Chrome, then screenshot:
    - The popup open showing the protest manifesto + form
    - The popup after opt-out showing the two sections (manual/auto)
-   - The game (open game.html, let the city render, screenshot the title screen)
-   - The full webpage (optout-page.html open in browser, screenshot the hero)
+   - Open `optout-page.html` in a browser tab and screenshot the hero section
    - Required size: **1280×800** (use Windows Snipping Tool, crop to exact size)
+   - You need at least 1 screenshot; 3-5 is ideal.
 
-3. **Zip the folder** — select all files inside the extension folder, zip them
-   (not the folder itself — the manifest.json must be at the root of the zip)
+3. **Zip the extension** — open the folder `ice-surveillance-extension\`, select
+   these files ONLY (do NOT include the whole folder, and exclude the files below):
+   ```
+   INCLUDE:
+     background.js
+     brokers.js
+     content.js
+     manifest.json
+     optout.js
+     popup.css
+     popup.html
+     popup.js
+     privacy.html
+     icons\  (the whole icons folder)
+
+   EXCLUDE (do not zip these):
+     .git\
+     STORE-LISTING.md
+     optout-page.html
+     test-extension.js
+     test-extension.mjs
+   ```
+   Right-click the selected files → Send to → Compressed (zipped) folder.
+   Rename the zip to `drop-your-phone-1.0.0.zip`.
 
 ---
 
@@ -102,12 +126,17 @@ Required to save the user's opt-out profile (name, email, city, state) locally o
 
 **tabs**
 ```
-Required to open data broker opt-out pages in background tabs as part of the automated opt-out queue.
+Required to open data broker opt-out pages in background tabs as part of the automated opt-out queue. The extension opens one tab at a time (never floods the browser) and closes each tab automatically after the opt-out form is submitted.
 ```
 
-**host_permissions: <all_urls>**
+**alarms**
 ```
-The cookie banner blocker must run on any website the user visits, since cookie banners appear on all domains. The opt-out form filler also needs access to 107 specific data broker domains to auto-fill opt-out forms.
+Required to guarantee opt-out tabs close within a fixed time window even if a site redirects unexpectedly, shows a CAPTCHA, or fails to load. Without alarms, the opt-out queue could stall indefinitely on a broken page. The alarm fires after 1 minute (background tabs) or 10 minutes (foreground tabs requiring user input) and closes the tab so the queue can continue.
+```
+
+**content_scripts match pattern: <all_urls>**
+```
+The cookie consent banner blocker must run on any website the user visits, since cookie banners appear across all domains and cannot be predicted in advance. The extension reads the current page only to detect and click the "reject all" or "necessary only" button on cookie banners. No page content is recorded or transmitted. The opt-out form filler additionally runs on 107 specific data broker opt-out pages (listed in the manifest) to pre-fill removal request forms.
 ```
 
 ---
