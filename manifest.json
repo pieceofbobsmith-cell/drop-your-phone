@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Drop Your Phone",
-  "version": "1.0.3",
+  "version": "0.0.1",
   "minimum_chrome_version": "109",
   "description": "Block cookie trackers and opt out of data brokers. A social justice art piece about ICE and data broker surveillance.",
   "permissions": ["activeTab", "alarms", "scripting", "storage", "tabs"],
