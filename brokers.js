@@ -1,25 +1,143 @@
 // brokers.js — loaded by popup.html and optout.js content scripts.
 //
+// Broker list sourced from:
+//   Big Ass Data Broker Opt-Out List (BADBOOL) by Yael Writes
+//   https://github.com/yaelwrites/Big-Ass-Data-Broker-Opt-Out-List (MIT)
+//
 // Fields:
-//   emailOnly: true  → background tab, auto-fills email + submits, auto-closes
+//   emailOnly: true  → background tab, auto-fills email (+ optional name) + submits, auto-closes
 //   emailOnly: false → foreground tab, fills search form, user picks record + closes tab
 //   manual: true     → not queued; Open button shown with step-by-step instructions
 //   covered: true    → handled by another broker; shown in list but not queued
-//   selectors.checkbox → a consent/terms checkbox to click before submitting
-//   selectors.fullName → a single combined first+last name field
+//   selectors.checkbox     → a consent/terms checkbox to click before submitting
+//   selectors.fullName     → a single combined first+last name field
+//   selectors.emailConfirm → a confirm-email field (filled with same email value)
 
 const BROKERS = [
+
+  // ══════════════════════════════════════════════════════════════════════
+  // EMAIL-ONLY — background tab, auto-fills form + submits, auto-closes.
+  // No user interaction required.
+  // ══════════════════════════════════════════════════════════════════════
+
+  // ── CheckPeople / FreePeopleSearch (same platform) ────────────────────────
+  {
+    id: 'checkpeople', name: 'CheckPeople',
+    url: 'https://checkpeople.com/opt-out',
+    emailOnly: true,
+    selectors: { email: 'input#requestorEmail', checkbox: 'input#acknowledge', submit: 'button.cp-auto-optout__button' },
+  },
+  {
+    id: 'freepeoplesearch', name: 'FreePeopleSearch',
+    url: 'https://freepeoplesearch.com/opt-out',
+    emailOnly: true,
+    selectors: { email: 'input#requestorEmail', checkbox: 'input#acknowledge', submit: 'input.fps-auto-optout__button' },
+  },
+
+  // ── OfficialUSA / ClustrMaps (same platform) ─────────────────────────────
+  {
+    id: 'officialusa', name: 'OfficialUSA',
+    url: 'https://www.officialusa.com/opt-out/',
+    emailOnly: true,
+    selectors: { email: 'input[name="inputEmail"]', submit: 'button.fndprs' },
+  },
+  {
+    id: 'clustrmaps', name: 'ClustrMaps',
+    url: 'https://clustrmaps.com/bl/opt-out',
+    emailOnly: true,
+    selectors: { email: 'input[name="inputEmail"]', submit: 'button.submit-comment' },
+  },
+
+  // ── TruePeopleSearch ──────────────────────────────────────────────────────
+  {
+    id: 'truepeoplesearch', name: 'TruePeopleSearch',
+    url: 'https://www.truepeoplesearch.com/removal',
+    emailOnly: true,
+    selectors: { email: 'input[name="email"], input[type="email"]', submit: 'button[type="submit"], input[type="submit"]' },
+  },
+
+  // ── SearchPeopleFree — name + email + Turnstile (auto-solved in real Chrome)
+  {
+    id: 'searchpeoplefree', name: 'SearchPeopleFree',
+    url: 'https://www.searchpeoplefree.com/opt-out',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input#o_first',
+      lastName:  'input#o_last',
+      email:     'input#o_email',
+      checkbox:  'input#o_terms',
+      submit:    'button#o_submit',
+    },
+  },
+
+  // ── Nuwber — specific selectors required (multiple forms on page) ─────────
+  {
+    id: 'nuwber', name: 'Nuwber',
+    url: 'https://nuwber.com/removal/link',
+    emailOnly: true,
+    selectors: { email: 'input#removebylink-email', submit: 'button.js-touch-trigger' },
+  },
+
+  // ── USPhoneBook — name + email form (URL changed to /removal) ────────────
+  {
+    id: 'usphonebook', name: 'USPhoneBook',
+    url: 'https://www.usphonebook.com/removal',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input#subject-firstname',
+      lastName:  'input#subject-lastname',
+      email:     'input#subject-email',
+      checkbox:  'input#agreement',
+      submit:    'button#BRP',
+    },
+  },
+
+  // ── PeopleSearchNow — name + email form (same platform as USPhoneBook) ────
+  {
+    id: 'peoplesearchnow', name: 'PeopleSearchNow',
+    url: 'https://www.peoplesearchnow.com/opt-out',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input#subject-firstname',
+      lastName:  'input#subject-lastname',
+      email:     'input#subject-email',
+      checkbox:  'input#agreement',
+      submit:    'button#BRP',
+    },
+  },
+
+  // ── IDCrawl — email + confirm-email form (URL changed to /remove-my-information)
+  {
+    id: 'idcrawl', name: 'IDCrawl',
+    url: 'https://www.idcrawl.com/remove-my-information',
+    emailOnly: true,
+    selectors: {
+      email:        'input[name="email"]',
+      emailConfirm: 'input[name="email-confirm"]',
+      submit:       'button[type="submit"], input[type="submit"]',
+    },
+  },
 
   // ══════════════════════════════════════════════════════════════════════
   // SEARCH-FIRST (foreground tab — we fill the search form, user picks record)
   // ══════════════════════════════════════════════════════════════════════
 
+  // ── FastPeopleSearch — multi-step Alpine.js form (URL changed to /optout) ─
+  {
+    id: 'fastpeoplesearch', name: 'FastPeopleSearch',
+    url: 'https://www.fastpeoplesearch.com/optout',
+    emailOnly: false,
+    selectors: {
+      firstName: 'input#firstname',
+      lastName:  'input#lastname',
+      email:     'input#email',
+      checkbox:  'input[name="legal"]',
+      submit:    'button[type="submit"]',
+    },
+    instructions: 'Form is pre-filled. Select "The subject of this request" from the dropdown → click Submit → verify via email.',
+  },
+
   // ── PeopleConnect network — ONE suppression covers all brands ─────────────
-  // Confirmed working. Covers: TruthFinder, InstantCheckmate, Intelius,
-  //   ZabaSearch, US Search, AnyWho, Addresses.com, PeopleLookup,
-  //   NeighborWho, ReversePhoneLookup.com
-  // DOM verified 2026-05-13: email input[name="login-email"], checkbox input[name="consent"],
-  //   submit button[type="submit"] — NOT disabled on load, both fields required.
   {
     id: 'peopleconnect', name: 'PeopleConnect Suppression Center',
     url: 'https://suppression.peopleconnect.us/login',
@@ -42,15 +160,37 @@ const BROKERS = [
   { id: 'neighborwho',        name: 'NeighborWho',           url: 'https://neighborwho.com/opt-out',              covered: true, instructions: 'Covered by PeopleConnect Suppression Center.' },
   { id: 'reversephonelookup', name: 'ReversePhoneLookup',    url: 'https://www.reversephonelookup.com/opt-out',   covered: true, instructions: 'Covered by PeopleConnect Suppression Center (Intelius).' },
 
-  // ── FamilyTreeNow — Cloudflare-blocked as of 2026-05-13 ──────────────────
+  // ── BeenVerified network (URL changed to /svc/optout) ────────────────────
   {
-    id: 'familytreenow', name: 'FamilyTreeNow',
-    url: 'https://www.familytreenow.com/optout',
-    manual: true,
-    instructions: 'Cloudflare-protected — must open manually. Fill first name, last name, email → solve hCaptcha → click Begin Privacy Request → verify email → find and opt out your record.',
+    id: 'beenverified', name: 'BeenVerified',
+    url: 'https://www.beenverified.com/svc/optout/search/optouts',
+    emailOnly: false,
+    selectors: {
+      firstName: 'input[name="fname"]',
+      lastName:  'input[name="ln"]',
+      submit:    'button[type="submit"]',
+    },
+    instructions: 'Auto-fills name. Complete Turnstile → Search → find your record → Opt Out → verify via email. Also removes PeopleSmart, PeopleLooker, BackgroundAlert.',
+  },
+  { id: 'peoplesmart',      name: 'PeopleSmart',     url: 'https://www.peoplesmart.com/optout-go',              covered: true, instructions: 'Covered by BeenVerified opt-out.' },
+  { id: 'peoplelooker',     name: 'PeopleLooker',    url: 'https://www.peoplelooker.com/f/optout/search',       covered: true, instructions: 'Covered by BeenVerified opt-out.' },
+  { id: 'backgroundalert',  name: 'BackgroundAlert', url: 'https://www.backgroundalert.com/optout/',            covered: true, instructions: 'Covered by BeenVerified opt-out.' },
+
+  // ── PeopleFinders network ─────────────────────────────────────────────────
+  {
+    id: 'peoplefinders', name: 'PeopleFinders',
+    url: 'https://www.peoplefinders.com/opt-out',
+    emailOnly: false,
+    selectors: {
+      firstName: 'input[name="firstname"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastname"], input[placeholder*="last" i]',
+      state:     'select[name="state"], select[id*="state"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+    instructions: 'Auto-fills name + state. Click Search → find your record → opt out → verify email.',
   },
 
-  // ── SearchQuarry — DOM verified 2026-05-13: uses long ASP.NET model-binding IDs ─
+  // ── SearchQuarry / RecordsFinder / CourtCaseFinder (InfoPay platform) ─────
   {
     id: 'searchquarry', name: 'SearchQuarry',
     url: 'https://members.searchquarry.com/opt-out',
@@ -64,8 +204,33 @@ const BROKERS = [
     },
     instructions: 'Form is pre-filled. Click Submit → find your record → confirm opt-out.',
   },
+  {
+    id: 'recordsfinder', name: 'RecordsFinder',
+    url: 'https://recordsfinder.com/optout/',
+    emailOnly: false,
+    selectors: {
+      firstName: 'input#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_fname',
+      lastName:  'input#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_lname',
+      state:     'select#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_state',
+      city:      'input#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_city',
+      submit:    'button.form-btn',
+    },
+    instructions: 'Form is pre-filled. Click Submit → find your record → confirm opt-out.',
+  },
+  {
+    id: 'courtcasefinder', name: 'CourtCaseFinder',
+    url: 'https://www.courtcasefinder.com/optout',
+    emailOnly: false,
+    selectors: {
+      firstName: 'input#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_fname',
+      lastName:  'input#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_lname',
+      city:      'input#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_city',
+      submit:    'button.form-btn',
+    },
+    instructions: 'Form is pre-filled. Click Submit → find your record → confirm opt-out.',
+  },
 
-  // ── ThatsThem — Spokeo-operated, confirmed working (full name + address + phone) ─
+  // ── ThatsThem — full info form ────────────────────────────────────────────
   {
     id: 'thatsthem', name: "That'sThem",
     url: 'https://thatsthem.com/optout',
@@ -83,22 +248,7 @@ const BROKERS = [
     instructions: 'Form is pre-filled with your details. Click Submit Opt-Out Request.',
   },
 
-  // ── RecordsFinder — DOM verified 2026-05-14: identical InfoPay ASP.NET IDs as SearchQuarry ─
-  {
-    id: 'recordsfinder', name: 'RecordsFinder',
-    url: 'https://recordsfinder.com/optout/',
-    emailOnly: false,
-    selectors: {
-      firstName: 'input#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_fname',
-      lastName:  'input#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_lname',
-      state:     'select#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_state',
-      city:      'input#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_city',
-      submit:    'button.form-btn',
-    },
-    instructions: 'Form is pre-filled. Click Submit → find your record → confirm opt-out.',
-  },
-
-  // ── InfoTracer — DOM verified 2026-05-14: firstName/lastName/state/city form ─
+  // ── InfoTracer — name + state search ─────────────────────────────────────
   {
     id: 'infotracer', name: 'InfoTracer',
     url: 'https://infotracer.com/optout/',
@@ -113,9 +263,7 @@ const BROKERS = [
     instructions: 'Form is pre-filled. Click Submit → find your record in results → opt out.',
   },
 
-  // ── PublicInfoServices — DOM verified 2026-05-14: full removal form + Cloudflare Turnstile ─
-  // All fields (first, last, city, state, zip, email) + Turnstile auto-solves in real Chrome.
-  // lastName field has obfuscated name attr — matched by placeholder instead.
+  // ── PublicInfoServices — full form + Cloudflare Turnstile ────────────────
   {
     id: 'publicinfoservices', name: 'PublicInfoServices',
     url: 'https://www.publicinfoservices.com/help-center/privacy-requests',
@@ -132,7 +280,7 @@ const BROKERS = [
     instructions: 'Form is pre-filled. Wait for Turnstile → verify form → click Submit.',
   },
 
-  // ── PrivateRecords — name/city/state search form ─────────────────────────────
+  // ── PrivateRecords — name/city/state search ───────────────────────────────
   {
     id: 'privaterecords', name: 'PrivateRecords',
     url: 'https://www.privaterecords.net/api/helper/optOutLight/search',
@@ -148,110 +296,104 @@ const BROKERS = [
     instructions: 'Form is pre-filled. Click Search → find your record → confirm removal.',
   },
 
-  // ══════════════════════════════════════════════════════════════════════
-  // EMAIL-ONLY (background tab — confirmed working, auto-closes)
-  // ══════════════════════════════════════════════════════════════════════
-
-  // ── CheckPeople — DOM verified 2026-05-13 ─────────────────────────────────
-  // Requires: email (input#requestorEmail) + consent checkbox (input#acknowledge).
-  // Button (button.cp-auto-optout__button) enables after both are filled.
-  {
-    id: 'checkpeople', name: 'CheckPeople',
-    url: 'https://checkpeople.com/opt-out',
-    emailOnly: true,
-    selectors: {
-      email:    'input#requestorEmail',
-      checkbox: 'input#acknowledge',
-      submit:   'button.cp-auto-optout__button',
-    },
-    instructions: 'Auto-fills email + checks consent → Continue → verify via email link.',
-  },
-  // ── FreePeopleSearch — DOM verified 2026-05-13 ───────────────────────────
-  // Same pattern as CheckPeople. Submit is <input type="submit"> not <button>.
-  {
-    id: 'freepeoplesearch', name: 'FreePeopleSearch',
-    url: 'https://freepeoplesearch.com/opt-out',
-    emailOnly: true,
-    selectors: {
-      email:    'input#requestorEmail',
-      checkbox: 'input#acknowledge',
-      submit:   'input.fps-auto-optout__button',
-    },
-    instructions: 'Auto-fills email + checks consent → Continue → verify via email link.',
-  },
-  // ── OfficialUSA — DOM verified 2026-05-13 ───────────────────────────────
-  // Has Cloudflare Turnstile that auto-solves in real Chrome (~2-5s).
-  // Button (button.fndprs) stays disabled until Turnstile completes.
-  // optout.js clickWhenReady retries up to 20s to handle Turnstile delay.
-  {
-    id: 'officialusa', name: 'OfficialUSA',
-    url: 'https://www.officialusa.com/opt-out/',
-    emailOnly: true,
-    selectors: {
-      email:  'input[name="inputEmail"]',
-      submit: 'button.fndprs',
-    },
-    instructions: 'Auto-fills email → waits for Turnstile → Next Step → opt-out submitted.',
-  },
-  // ── ClustrMaps — DOM verified 2026-05-13 ────────────────────────────────
-  // Same backend/Turnstile as OfficialUSA.
-  {
-    id: 'clustrmaps', name: 'ClustrMaps',
-    url: 'https://clustrmaps.com/bl/opt-out',
-    emailOnly: true,
-    selectors: {
-      email:  'input[name="inputEmail"]',
-      submit: 'button.submit-comment',
-    },
-    instructions: 'Auto-fills email → waits for Turnstile → Next Step → verify via email link.',
-  },
-
-  // ══════════════════════════════════════════════════════════════════════
-  // MANUAL — Cloudflare-blocked, needs profile URL, or multi-step CAPTCHA
-  // ══════════════════════════════════════════════════════════════════════
-
-  {
-    id: 'beenverified', name: 'BeenVerified',
-    url: 'https://www.beenverified.com/app/optout/search',
-    manual: true,
-    instructions: 'Cloudflare-protected — must open manually. Search your name → select your record → Opt Out → confirm via email.',
-  },
-  {
-    id: 'peoplesmart', name: 'PeopleSmart',
-    url: 'https://www.peoplesmart.com/optout-go',
-    manual: true,
-    instructions: 'BeenVerified network — must open manually. Search your name → select record → confirm via email.',
-  },
-  { id: 'backgroundalert', name: 'BackgroundAlert', url: 'https://www.backgroundalert.com/optout/', covered: true, instructions: 'Covered by BeenVerified / PeopleSmart network.' },
-
-  {
-    id: 'nuwber', name: 'Nuwber',
-    url: 'https://nuwber.com/removal/link',
-    manual: true,
-    instructions: 'Cloudflare-protected — must open manually. Enter email → click removal link in email.',
-  },
-  {
-    id: 'peoplefinders', name: 'PeopleFinders',
-    url: 'https://www.peoplefinders.com/opt-out',
-    manual: true,
-    instructions: 'Cloudflare-protected — must open manually. Enter name → search → select record → Opt Out → verify email. Also removes FastPeopleSearch, TruePeopleSearch, SearchPeopleFree.',
-  },
-  { id: 'fastpeoplesearch', name: 'FastPeopleSearch', url: 'https://www.fastpeoplesearch.com/removal',  covered: true, instructions: 'Covered by PeopleFinders opt-out above.' },
-  { id: 'truepeoplesearch', name: 'TruePeopleSearch', url: 'https://www.truepeoplesearch.com/removal',  covered: true, instructions: 'Covered by PeopleFinders opt-out above.' },
-  { id: 'searchpeoplefree', name: 'SearchPeopleFree', url: 'https://www.searchpeoplefree.com/opt-out', covered: true, instructions: 'Covered by PeopleFinders opt-out above.' },
-
-  {
-    id: 'golookup', name: 'GoLookUp',
-    url: 'https://golookup.com/opt-out',
-    manual: true,
-    instructions: 'Cloudflare-protected — must open manually. Enter email → verify.',
-  },
+  // ── CyberBackgroundChecks — name search ───────────────────────────────────
   {
     id: 'cyberbackgroundchecks', name: 'CyberBackgroundChecks',
     url: 'https://www.cyberbackgroundchecks.com/removal',
-    manual: true,
-    instructions: 'Cloudflare-protected — must open manually. Search name → select record → Remove → verify email.',
+    emailOnly: false,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      state:     'select[name="state"], select[id*="state"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+    instructions: 'Auto-fills name + state. Click Search → select your record → Remove → verify email.',
   },
+
+  // ── SmartBackgroundChecks — name + state search ───────────────────────────
+  {
+    id: 'smartbackgroundchecks', name: 'SmartBackgroundChecks',
+    url: 'https://www.smartbackgroundchecks.com/optout',
+    emailOnly: false,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      state:     'select[name="state"], select[id*="state"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+    instructions: 'Auto-fills name + state. Click Search → select your record → Remove.',
+  },
+
+  // ── AdvancedBackgroundChecks — name + email (user solves reCAPTCHA) ───────
+  {
+    id: 'advancedbackgroundchecks', name: 'AdvancedBGChecks',
+    url: 'https://www.advancedbackgroundchecks.com/removal',
+    emailOnly: false,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[type="email"]',
+      checkbox:  'input[type="checkbox"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+    instructions: 'Auto-fills name + email + checks authorization box. Solve reCAPTCHA → click Begin Removal → confirm via email.',
+  },
+
+  // ── FamilyTreeNow — user solves hCaptcha ─────────────────────────────────
+  {
+    id: 'familytreenow', name: 'FamilyTreeNow',
+    url: 'https://www.familytreenow.com/optout',
+    emailOnly: false,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+    instructions: 'Auto-fills name + email. Solve hCaptcha → Begin Privacy Request → verify email → find and opt out your record.',
+  },
+
+  // ── Acxiom — name + email + address ──────────────────────────────────────
+  {
+    id: 'acxiom', name: 'Acxiom',
+    url: 'https://www.acxiom.com/optout/',
+    emailOnly: false,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[type="email"]',
+      street:    'input[name="address"], input[placeholder*="address" i]',
+      city:      'input[name="city"]',
+      state:     'select[name="state"]',
+      zip:       'input[name="zip"], input[name="postal"]',
+      checkbox:  'input[type="checkbox"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+    instructions: 'Auto-fills name, email, and address. Check consent box → click Submit → confirm via email.',
+  },
+
+  // ── MyLife — JotForm (auto-fills all fields) ──────────────────────────────
+  {
+    id: 'mylife', name: 'MyLife',
+    url: 'https://mylife.jotform.com/260284407610047',
+    emailOnly: false,
+    selectors: {
+      firstName: 'input[id*="first"], input[name*="first"]',
+      lastName:  'input[id*="last"], input[name*="last"]',
+      email:     'input[type="email"]',
+      street:    'input[id*="addr_line1"], input[name*="addr_line1"]',
+      city:      'input[id*="addr_city"], input[name*="addr_city"]',
+      state:     'select[id*="addr_state"], input[id*="addr_state"]',
+      zip:       'input[id*="addr_zip"], input[name*="postal"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+    instructions: 'Auto-fills all fields. Solve reCAPTCHA → click Submit.',
+  },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // MANUAL — requires profile URL, phone call, SSN verification, or account
+  // ══════════════════════════════════════════════════════════════════════
+
   {
     id: 'spokeo', name: 'Spokeo',
     url: 'https://www.spokeo.com/optout',
@@ -262,7 +404,7 @@ const BROKERS = [
     id: 'whitepages', name: 'WhitePages',
     url: 'https://www.whitepages.com/suppression-requests',
     manual: true,
-    instructions: '1. Find your listing on whitepages.com and copy the URL. 2. Paste it into the suppression form. 3. Solve reCAPTCHA. 4. Enter phone number — you\'ll get an automated call. 5. Press 1 to confirm removal.',
+    instructions: "1. Find your listing on whitepages.com and copy the URL. 2. Paste it into the suppression form. 3. Solve reCAPTCHA. 4. Enter phone number — you'll get an automated call. 5. Press 1 to confirm removal.",
   },
   {
     id: 'radaris', name: 'Radaris',
@@ -271,76 +413,10 @@ const BROKERS = [
     instructions: '1. Search your name on radaris.com. 2. Open your profile. 3. Click ⋮ → Control Info → Remove Info. 4. Enter email → solve reCAPTCHA → confirm via email.',
   },
   {
-    id: 'mylife', name: 'MyLife',
-    url: 'https://mylife.jotform.com/260284407610047',
-    manual: true,
-    instructions: '1. Fill in name, email, birth year, and address on the JotForm. 2. Optionally paste your MyLife profile URL. 3. Solve reCAPTCHA. 4. Click Submit.',
-  },
-  {
-    id: 'acxiom', name: 'Acxiom',
-    url: 'https://www.acxiom.com/optout/',
-    manual: true,
-    instructions: '1. On the Acxiom Privacy Center, fill your name, email, and address in the "US Individual Opt Out" form. 2. Check the consent box. 3. Click Submit. 4. Confirm via email.',
-  },
-  {
-    id: 'idcrawl', name: 'IDCrawl',
-    url: 'https://www.idcrawl.com/opt-out',
-    manual: true,
-    instructions: '1. Search your name on idcrawl.com. 2. Copy your profile URL. 3. On the opt-out page, paste the URL + enter email. 4. Solve reCAPTCHA. 5. Click Submit → confirm via email.',
-  },
-  {
-    id: 'advancedbackgroundchecks', name: 'AdvancedBGChecks',
-    url: 'https://www.advancedbackgroundchecks.com/removal',
-    manual: true,
-    instructions: '1. Fill first name, last name, and email. 2. Check the authorization box. 3. Solve reCAPTCHA. 4. Click "Begin Removal Process". 5. Click the emailed link → complete details on the next form.',
-  },
-  {
-    id: 'spydialer', name: 'SpyDialer',
-    url: 'https://www.spydialer.com/consumers/',
-    manual: true,
-    instructions: '1. Click "Start". 2. Enter your phone number in the wizard. 3. Confirm removal.',
-  },
-  {
-    id: 'freepeopledirectory', name: 'FreePeopleDirectory',
-    url: 'https://www.freepeopledirectory.com/optout',
-    manual: true,
-    instructions: '1. Find your profile on freepeopledirectory.com and copy the URL. 2. Paste it into the removal form. 3. Click Submit.',
-  },
-  {
-    id: 'zoominfo', name: 'ZoomInfo',
-    url: 'https://www.zoominfo.com/privacy-center/privacy/profile-opt-out',
-    manual: true,
-    instructions: '1. Click "Manage Your Profile". 2. Enter your email. 3. Click the verification link. 4. Follow removal steps.',
-  },
-  {
-    id: 'smartbackgroundchecks', name: 'SmartBackgroundChecks',
-    url: 'https://www.smartbackgroundchecks.com/optout',
-    manual: true,
-    instructions: 'Cloudflare-protected — must open manually. Enter name + state → find record → Remove.',
-  },
-  {
-    id: 'usphonebook', name: 'USPhoneBook',
-    url: 'https://www.usphonebook.com/opt-out',
-    manual: true,
-    instructions: 'Cloudflare-protected — must open manually. Enter email → verify to remove listing.',
-  },
-  {
-    id: 'peoplesearchnow', name: 'PeopleSearchNow',
-    url: 'https://www.peoplesearchnow.com/opt-out',
-    manual: true,
-    instructions: 'Cloudflare-protected — must open manually. Enter email → verify to remove listing.',
-  },
-  {
     id: 'lexisnexis', name: 'LexisNexis',
     url: 'https://optout.lexisnexis.com/',
     manual: true,
     instructions: 'Requires name, address, and last 4 digits of SSN to verify identity. Go to optout.lexisnexis.com and complete the multi-step form.',
-  },
-  {
-    id: 'peoplefindfast', name: 'PeopleFindFast',
-    url: 'https://www.peoplefindfast.com/ng/control/privacy',
-    manual: true,
-    instructions: 'Cloudflare-protected — must open manually. Find your profile → paste profile URL → enter email → submit.',
   },
 
 ];

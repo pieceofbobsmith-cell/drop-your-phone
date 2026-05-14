@@ -191,11 +191,12 @@
         chrome.runtime.sendMessage({ type: 'FILLING_STARTED' });
       }
 
-      const fullNameEl = findInput(sel.fullName, 'fullName');
-      const firstEl    = findInput(sel.firstName, 'firstName');
-      const lastEl     = findInput(sel.lastName,  'lastName');
-      const emailEl    = findInput(sel.email,     'email');
-      const cityEl     = findInput(sel.city,      'city');
+      const fullNameEl     = findInput(sel.fullName, 'fullName');
+      const firstEl        = findInput(sel.firstName, 'firstName');
+      const lastEl         = findInput(sel.lastName,  'lastName');
+      const emailEl        = findInput(sel.email,     'email');
+      const emailConfirmEl = sel.emailConfirm ? document.querySelector(sel.emailConfirm) : null;
+      const cityEl         = findInput(sel.city,      'city');
       const streetEl   = findInput(sel.street,    'street');
       const zipEl      = findInput(sel.zip,       'zip');
       const phoneEl    = findInput(sel.phone,     'phone');
@@ -206,8 +207,9 @@
       if (fillEl(fullNameEl, fullName))                    filled++;
       if (fillEl(firstEl,  optoutProfile.firstName))       filled++;
       if (fillEl(lastEl,   optoutProfile.lastName))        filled++;
-      if (fillEl(emailEl,  optoutProfile.email))           filled++;
-      if (fillEl(cityEl,   optoutProfile.city))            filled++;
+      if (fillEl(emailEl,        optoutProfile.email))       filled++;
+      if (fillEl(emailConfirmEl, optoutProfile.email))     filled++;
+      if (fillEl(cityEl,         optoutProfile.city))      filled++;
       if (fillEl(streetEl, optoutProfile.street))          filled++;
       if (fillEl(zipEl,    optoutProfile.zip))             filled++;
       if (fillEl(phoneEl,  optoutProfile.phone))           filled++;

@@ -1,10 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Drop Your Phone",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "minimum_chrome_version": "109",
   "description": "Block cookie trackers and opt out of data brokers. A social justice art piece about ICE and data broker surveillance.",
-  "permissions": ["activeTab", "alarms", "scripting", "storage", "tabs"],
+  "permissions": ["activeTab", "alarms", "cookies", "scripting", "storage", "tabs"],
+  "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
   },
@@ -16,18 +17,34 @@
     },
     {
       "matches": [
-        "https://suppression.peopleconnect.us/*",
-        "https://members.searchquarry.com/opt-out*",
-        "https://www.searchquarry.com/optout*",
-        "https://thatsthem.com/optout*",
         "https://checkpeople.com/opt-out*",
         "https://freepeoplesearch.com/opt-out*",
         "https://www.officialusa.com/opt-out*",
         "https://clustrmaps.com/bl/opt-out*",
+        "https://www.truepeoplesearch.com/removal*",
+        "https://www.searchpeoplefree.com/opt-out*",
+        "https://nuwber.com/removal/*",
+        "https://www.usphonebook.com/removal*",
+        "https://www.peoplesearchnow.com/opt-out*",
+        "https://www.idcrawl.com/remove-my-information*",
+        "https://www.fastpeoplesearch.com/optout*",
+        "https://suppression.peopleconnect.us/*",
+        "https://www.beenverified.com/svc/optout/*",
+        "https://www.peoplefinders.com/opt-out*",
+        "https://members.searchquarry.com/opt-out*",
+        "https://www.searchquarry.com/optout*",
         "https://recordsfinder.com/optout/*",
+        "https://www.courtcasefinder.com/optout*",
+        "https://thatsthem.com/optout*",
         "https://infotracer.com/optout/*",
         "https://www.publicinfoservices.com/*",
-        "https://www.privaterecords.net/*"
+        "https://www.privaterecords.net/*",
+        "https://www.cyberbackgroundchecks.com/removal*",
+        "https://www.smartbackgroundchecks.com/optout*",
+        "https://www.advancedbackgroundchecks.com/removal*",
+        "https://www.familytreenow.com/optout*",
+        "https://www.acxiom.com/optout/*",
+        "https://mylife.jotform.com/*"
       ],
       "js": ["brokers.js", "optout.js"],
       "run_at": "document_idle"
