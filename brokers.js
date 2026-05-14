@@ -83,6 +83,71 @@ const BROKERS = [
     instructions: 'Form is pre-filled with your details. Click Submit Opt-Out Request.',
   },
 
+  // ── RecordsFinder — DOM verified 2026-05-14: identical InfoPay ASP.NET IDs as SearchQuarry ─
+  {
+    id: 'recordsfinder', name: 'RecordsFinder',
+    url: 'https://recordsfinder.com/optout/',
+    emailOnly: false,
+    selectors: {
+      firstName: 'input#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_fname',
+      lastName:  'input#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_lname',
+      state:     'select#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_state',
+      city:      'input#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_city',
+      submit:    'button.form-btn',
+    },
+    instructions: 'Form is pre-filled. Click Submit → find your record → confirm opt-out.',
+  },
+
+  // ── InfoTracer — DOM verified 2026-05-14: firstName/lastName/state/city form ─
+  {
+    id: 'infotracer', name: 'InfoTracer',
+    url: 'https://infotracer.com/optout/',
+    emailOnly: false,
+    selectors: {
+      firstName: 'input[placeholder="First Name *"]',
+      lastName:  'input[placeholder="Last Name *"]',
+      state:     'select',
+      city:      'input[placeholder="City"]',
+      submit:    'button[type="submit"]',
+    },
+    instructions: 'Form is pre-filled. Click Submit → find your record in results → opt out.',
+  },
+
+  // ── PublicInfoServices — DOM verified 2026-05-14: full removal form + Cloudflare Turnstile ─
+  // All fields (first, last, city, state, zip, email) + Turnstile auto-solves in real Chrome.
+  // lastName field has obfuscated name attr — matched by placeholder instead.
+  {
+    id: 'publicinfoservices', name: 'PublicInfoServices',
+    url: 'https://www.publicinfoservices.com/help-center/privacy-requests',
+    emailOnly: false,
+    selectors: {
+      firstName: 'input[name="firstName"]',
+      lastName:  'input[placeholder="Last Name"]',
+      city:      'input[name="city"]',
+      state:     'select[name="States"]',
+      zip:       'input[name="zip"]',
+      email:     'input[name="email"]',
+      submit:    'button[type="submit"]',
+    },
+    instructions: 'Form is pre-filled. Wait for Turnstile → verify form → click Submit.',
+  },
+
+  // ── PrivateRecords — name/city/state search form ─────────────────────────────
+  {
+    id: 'privaterecords', name: 'PrivateRecords',
+    url: 'https://www.privaterecords.net/api/helper/optOutLight/search',
+    emailOnly: false,
+    selectors: {
+      firstName: 'input[name="fname"]',
+      lastName:  'input[name="lname"]',
+      city:      'input[name="city"]',
+      state:     'select[name="state"]',
+      email:     'input[name="email"]',
+      submit:    'input#pageFormSubmitBtn',
+    },
+    instructions: 'Form is pre-filled. Click Search → find your record → confirm removal.',
+  },
+
   // ══════════════════════════════════════════════════════════════════════
   // EMAIL-ONLY (background tab — confirmed working, auto-closes)
   // ══════════════════════════════════════════════════════════════════════
@@ -246,6 +311,36 @@ const BROKERS = [
     url: 'https://www.zoominfo.com/privacy-center/privacy/profile-opt-out',
     manual: true,
     instructions: '1. Click "Manage Your Profile". 2. Enter your email. 3. Click the verification link. 4. Follow removal steps.',
+  },
+  {
+    id: 'smartbackgroundchecks', name: 'SmartBackgroundChecks',
+    url: 'https://www.smartbackgroundchecks.com/optout',
+    manual: true,
+    instructions: 'Cloudflare-protected — must open manually. Enter name + state → find record → Remove.',
+  },
+  {
+    id: 'usphonebook', name: 'USPhoneBook',
+    url: 'https://www.usphonebook.com/opt-out',
+    manual: true,
+    instructions: 'Cloudflare-protected — must open manually. Enter email → verify to remove listing.',
+  },
+  {
+    id: 'peoplesearchnow', name: 'PeopleSearchNow',
+    url: 'https://www.peoplesearchnow.com/opt-out',
+    manual: true,
+    instructions: 'Cloudflare-protected — must open manually. Enter email → verify to remove listing.',
+  },
+  {
+    id: 'lexisnexis', name: 'LexisNexis',
+    url: 'https://optout.lexisnexis.com/',
+    manual: true,
+    instructions: 'Requires name, address, and last 4 digits of SSN to verify identity. Go to optout.lexisnexis.com and complete the multi-step form.',
+  },
+  {
+    id: 'peoplefindfast', name: 'PeopleFindFast',
+    url: 'https://www.peoplefindfast.com/ng/control/privacy',
+    manual: true,
+    instructions: 'Cloudflare-protected — must open manually. Find your profile → paste profile URL → enter email → submit.',
   },
 
 ];
