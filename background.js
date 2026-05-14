@@ -117,17 +117,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendResponse({ success: true });
   }
 
-  // optout.js started filling — cancel the forced-close alarm so CAPTCHA
-  // or slow React rendering doesn't cause the tab to close mid-fill.
-  // A generous 15-min replacement alarm is set so abandoned tabs still close.
+  // search-first only: optout.js filled the form — extend alarm so user has
+  // time to find their record. emailOnly tabs do NOT send this message so
+  // their 1-min alarm fires and advances the queue automatically.
   if (message.type === 'FILLING_STARTED') {
     chrome.alarms.clear('optoutTabClose');
     chrome.alarms.create('optoutTabClose', { delayInMinutes: 15 });
   }
 
-  // optout.js signals it's done — remove the tab (onRemoved opens the next)
+  // optout.js signals submit was clicked — set a 1-min alarm so the tab
+  // closes shortly after the confirmation page loads. This fires even if the
+  // form navigated away and killed the content script (no double-close risk:
+  // if the tab is already gone, optoutTabId is null and the alarm does nothing).
   if (message.type === 'CLOSE_ME' && sender.tab) {
-    chrome.tabs.remove(sender.tab.id).catch(() => {});
+    chrome.alarms.clear('optoutTabClose');
+    chrome.alarms.create('optoutTabClose', { delayInMinutes: 1 });
   }
 
   return true;

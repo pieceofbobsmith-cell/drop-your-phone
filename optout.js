@@ -73,6 +73,13 @@
         const el = document.querySelector(brokerSel);
         if (el && el.tagName === 'INPUT') return el;
       }
+      // fullName: single combined first+last field (e.g. ThatsThem)
+      if (type === 'fullName') {
+        return document.querySelector(
+          'input[placeholder*="John Smith" i], input[placeholder*="full name" i], ' +
+          'input[name*="fullname" i], input[id*="fullname" i], input[name="name"]'
+        ) || null;
+      }
       const acMap = {
         firstName: 'given-name', lastName: 'family-name', email: 'email',
         city: 'address-level2', street: 'street-address', zip: 'postal-code', phone: 'tel',
@@ -148,10 +155,14 @@
     };
 
     // ── isFormReady: submit button + at least one expected field present ───────
+    // Note: submit button may be disabled (React/Turnstile) — querySelector still finds it.
     const isFormReady = () => {
       if (!sel.submit || !document.querySelector(sel.submit)) return false;
-      if (isEmailOnly) return !!(findInput(sel.email, 'email') || findInput(null, 'email'));
+      if (isEmailOnly) {
+        return !!(findInput(sel.email, 'email') || findInput(null, 'email'));
+      }
       return !!(
+        findInput(sel.fullName,  'fullName')  ||
         findInput(sel.firstName, 'firstName') ||
         findInput(sel.lastName,  'lastName')  ||
         findInput(sel.email,     'email')
@@ -172,49 +183,70 @@
 
     // ── Main ──────────────────────────────────────────────────────────────────
     waitForForm(15000, () => {
-      // Tell background to cancel the forced-close alarm — we're actively filling.
-      // A 15-min replacement alarm will be set so abandoned tabs still eventually close.
-      chrome.runtime.sendMessage({ type: 'FILLING_STARTED' });
+      // search-first only: extend alarm to 15 min so the user has time to find
+      // their record before the tab auto-closes. emailOnly tabs keep their 1-min
+      // fallback alarm — the content script may not survive form-submit navigation,
+      // so sending FILLING_STARTED would silently extend the wait to 15 min.
+      if (!isEmailOnly) {
+        chrome.runtime.sendMessage({ type: 'FILLING_STARTED' });
+      }
 
-      const firstEl  = findInput(sel.firstName, 'firstName');
-      const lastEl   = findInput(sel.lastName,  'lastName');
-      const emailEl  = findInput(sel.email,     'email');
-      const cityEl   = findInput(sel.city,      'city');
-      const streetEl = findInput(sel.street,    'street');
-      const zipEl    = findInput(sel.zip,       'zip');
-      const phoneEl  = findInput(sel.phone,     'phone');
-      const stateEl  = findSelect(sel.state);
+      const fullNameEl = findInput(sel.fullName, 'fullName');
+      const firstEl    = findInput(sel.firstName, 'firstName');
+      const lastEl     = findInput(sel.lastName,  'lastName');
+      const emailEl    = findInput(sel.email,     'email');
+      const cityEl     = findInput(sel.city,      'city');
+      const streetEl   = findInput(sel.street,    'street');
+      const zipEl      = findInput(sel.zip,       'zip');
+      const phoneEl    = findInput(sel.phone,     'phone');
+      const stateEl    = findSelect(sel.state);
 
       let filled = 0;
-      if (fillEl(firstEl,  optoutProfile.firstName)) filled++;
-      if (fillEl(lastEl,   optoutProfile.lastName))  filled++;
-      if (fillEl(emailEl,  optoutProfile.email))     filled++;
-      if (fillEl(cityEl,   optoutProfile.city))      filled++;
-      if (fillEl(streetEl, optoutProfile.street))    filled++;
-      if (fillEl(zipEl,    optoutProfile.zip))       filled++;
-      if (fillEl(phoneEl,  optoutProfile.phone))     filled++;
-      if (fillSelect(stateEl, optoutProfile.state))  filled++;
+      const fullName = (optoutProfile.firstName + ' ' + optoutProfile.lastName).trim();
+      if (fillEl(fullNameEl, fullName))                    filled++;
+      if (fillEl(firstEl,  optoutProfile.firstName))       filled++;
+      if (fillEl(lastEl,   optoutProfile.lastName))        filled++;
+      if (fillEl(emailEl,  optoutProfile.email))           filled++;
+      if (fillEl(cityEl,   optoutProfile.city))            filled++;
+      if (fillEl(streetEl, optoutProfile.street))          filled++;
+      if (fillEl(zipEl,    optoutProfile.zip))             filled++;
+      if (fillEl(phoneEl,  optoutProfile.phone))           filled++;
+      if (fillSelect(stateEl, optoutProfile.state))        filled++;
       // Consent/terms checkboxes (e.g. PeopleConnect suppression center)
-      if (clickCheckbox(sel.checkbox)) filled++;
+      if (clickCheckbox(sel.checkbox))                     filled++;
 
       // Nothing filled — leave tab open, background 15-min alarm will close it
       if (filled === 0) return;
 
-      setTimeout(() => {
+      // Some sites disable their submit button until JS state catches up:
+      //   - React sites (CheckPeople, FreePeopleSearch): re-enable in ~200ms after fill+events
+      //   - Cloudflare Turnstile sites (OfficialUSA, ClustrMaps): auto-solve in real Chrome,
+      //     takes 2-10s. emailOnly sites retry for up to 20s to cover this.
+      //   - search-first sites: retry for ~1.2s (React state, no Turnstile)
+      const clickWhenReady = (attempts, delayMs) => {
         const btn = document.querySelector(sel.submit);
         if (!btn) return;
+        if (btn.disabled && attempts > 0) {
+          setTimeout(() => clickWhenReady(attempts - 1, delayMs), delayMs);
+          return;
+        }
         const form = btn.closest('form') || document.querySelector('form');
         if (form) form.noValidate = true;
         btn.click();
 
         if (isEmailOnly) {
-          // Background tab: close after confirmation page loads (~7s).
-          // The 15-min alarm in background.js is the safety net if this fails.
-          setTimeout(() => chrome.runtime.sendMessage({ type: 'CLOSE_ME' }), 7000);
+          // Tell background we just clicked submit. Background resets the alarm
+          // to 1 min — enough for the confirmation page to load before closing.
+          // Sent immediately (not via setTimeout) so it survives form navigation.
+          chrome.runtime.sendMessage({ type: 'CLOSE_ME' });
         }
         // search-first: tab stays open. User handles CAPTCHA + record selection.
         // Closes when user closes it, triggering the next broker.
-      }, 800);
+      };
+
+      // emailOnly: up to 100 × 200ms = 20s (covers Cloudflare Turnstile auto-solve time)
+      // search-first: up to 6 × 200ms = 1.2s (React state update)
+      setTimeout(() => clickWhenReady(isEmailOnly ? 100 : 6, 200), 800);
     });
   });
 })();

@@ -4,8 +4,9 @@
 //   emailOnly: true  → background tab, auto-fills email + submits, auto-closes
 //   emailOnly: false → foreground tab, fills search form, user picks record + closes tab
 //   manual: true     → not queued; Open button shown with step-by-step instructions
-//   covered: true    → handled by another broker in the queue; shown in list but not queued
+//   covered: true    → handled by another broker; shown in list but not queued
 //   selectors.checkbox → a consent/terms checkbox to click before submitting
+//   selectors.fullName → a single combined first+last name field
 
 const BROKERS = [
 
@@ -13,767 +14,238 @@ const BROKERS = [
   // SEARCH-FIRST (foreground tab — we fill the search form, user picks record)
   // ══════════════════════════════════════════════════════════════════════
 
-  {
-    id: 'beenverified', name: 'BeenVerified',
-    url: 'https://www.beenverified.com/app/optout/search',
-    emailOnly: false,
-    selectors: {
-      // React/MUI app — uses non-standard name attributes
-      firstName: 'input[name="fname"]',
-      lastName:  'input[name="ln"]',
-      state:     'input[name="state"]',   // text input, not a <select>
-      submit:    'button[aria-label="search-optout-button"], button[type="submit"]',
-    },
-    instructions: 'Form is pre-filled. Solve the Turnstile CAPTCHA → click Search → find your record → click Opt Out → confirm via email.',
-  },
-  {
-    id: 'peoplesmart', name: 'PeopleSmart',
-    url: 'https://www.peoplesmart.com/optout-go',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"]', lastName: 'input[name="lastName"]', submit: 'button[type="submit"]' },
-    instructions: 'BeenVerified network. Solve reCAPTCHA → Search → select record → confirm via email.',
-  },
-
   // ── PeopleConnect network — ONE suppression covers all brands ─────────────
-  // Brands covered: TruthFinder, InstantCheckmate, Intelius, ZabaSearch,
-  //   US Search, AnyWho, Addresses.com, PeopleLookup, Phonesbook, Spock + more
+  // Confirmed working. Covers: TruthFinder, InstantCheckmate, Intelius,
+  //   ZabaSearch, US Search, AnyWho, Addresses.com, PeopleLookup,
+  //   NeighborWho, ReversePhoneLookup.com
+  // DOM verified 2026-05-13: email input[name="login-email"], checkbox input[name="consent"],
+  //   submit button[type="submit"] — NOT disabled on load, both fields required.
   {
     id: 'peopleconnect', name: 'PeopleConnect Suppression Center',
     url: 'https://suppression.peopleconnect.us/login',
     emailOnly: false,
     selectors: {
       email:    'input[name="login-email"]',
-      checkbox: 'input[name="consent"]',   // must be checked before submit
+      checkbox: 'input[name="consent"]',
       submit:   'button[type="submit"]',
     },
-    instructions: 'Auto-fills email + checks consent. Click Continue → check your email → click the verification link → enter your name & DOB → find and suppress your record. Covers: TruthFinder, InstantCheckmate, Intelius, ZabaSearch, US Search, AnyWho.',
+    instructions: 'Auto-fills email + checks consent. Click Continue → check email → click verification link → enter name & DOB → find and suppress your record. Covers TruthFinder, InstantCheckmate, Intelius, ZabaSearch, US Search, AnyWho, Addresses.com.',
   },
-  {
-    id: 'truthfinder', name: 'TruthFinder',
-    url: 'https://www.truthfinder.com/opt-out/',
-    covered: true,
-    instructions: 'Covered by the PeopleConnect Suppression Center entry above.',
-  },
-  {
-    id: 'instantcheckmate', name: 'Instant Checkmate',
-    url: 'https://www.instantcheckmate.com/opt-out/',
-    covered: true,
-    instructions: 'Covered by the PeopleConnect Suppression Center entry above.',
-  },
-  {
-    id: 'intelius', name: 'Intelius',
-    url: 'https://www.intelius.com/opt-out/',
-    covered: true,
-    instructions: 'Covered by the PeopleConnect Suppression Center entry above.',
-  },
-  {
-    id: 'zabasearch', name: 'ZabaSearch',
-    url: 'https://www.zabasearch.com/block_records/',
-    covered: true,
-    instructions: 'Covered by the PeopleConnect Suppression Center entry above.',
-  },
-  {
-    id: 'ussearch', name: 'US Search',
-    url: 'https://www.ussearch.com/opt-out/',
-    covered: true,
-    instructions: 'Covered by the PeopleConnect Suppression Center entry above.',
-  },
-  {
-    id: 'anywho', name: 'AnyWho',
-    url: 'https://www.anywho.com/opt-out',
-    covered: true,
-    instructions: 'Covered by the PeopleConnect Suppression Center entry above.',
-  },
+  { id: 'truthfinder',        name: 'TruthFinder',           url: 'https://www.truthfinder.com/opt-out/',         covered: true, instructions: 'Covered by PeopleConnect Suppression Center.' },
+  { id: 'instantcheckmate',   name: 'Instant Checkmate',     url: 'https://www.instantcheckmate.com/opt-out/',    covered: true, instructions: 'Covered by PeopleConnect Suppression Center.' },
+  { id: 'intelius',           name: 'Intelius',              url: 'https://www.intelius.com/opt-out/',            covered: true, instructions: 'Covered by PeopleConnect Suppression Center.' },
+  { id: 'zabasearch',         name: 'ZabaSearch',            url: 'https://www.zabasearch.com/block_records/',    covered: true, instructions: 'Covered by PeopleConnect Suppression Center.' },
+  { id: 'ussearch',           name: 'US Search',             url: 'https://www.ussearch.com/opt-out/',            covered: true, instructions: 'Covered by PeopleConnect Suppression Center.' },
+  { id: 'anywho',             name: 'AnyWho',                url: 'https://www.anywho.com/opt-out',               covered: true, instructions: 'Covered by PeopleConnect Suppression Center.' },
+  { id: 'addresses',          name: 'Addresses.com',         url: 'https://www.addresses.com/optout',             covered: true, instructions: 'Covered by PeopleConnect Suppression Center.' },
+  { id: 'peoplelookup',       name: 'PeopleLookup',          url: 'https://www.peoplelookup.com/opt-out',         covered: true, instructions: 'Covered by PeopleConnect Suppression Center.' },
+  { id: 'neighborwho',        name: 'NeighborWho',           url: 'https://neighborwho.com/opt-out',              covered: true, instructions: 'Covered by PeopleConnect Suppression Center.' },
+  { id: 'reversephonelookup', name: 'ReversePhoneLookup',    url: 'https://www.reversephonelookup.com/opt-out',   covered: true, instructions: 'Covered by PeopleConnect Suppression Center (Intelius).' },
 
-  // ── PeopleFinders network — ONE opt-out covers FastPeopleSearch, TruePeopleSearch, SearchPeopleFree ─
-  {
-    id: 'peoplefinders', name: 'PeopleFinders',
-    url: 'https://www.peoplefinders.com/opt-out',
-    emailOnly: false,
-    selectors: {
-      firstName: 'input[placeholder="First Name"], input[name="firstName"]',
-      lastName:  'input[placeholder="Last Name"],  input[name="lastName"]',
-      email:     'input[type="email"]',
-      submit:    'button.btn.btn-success.opt-out-button, button[type="submit"]',
-    },
-    instructions: 'Click "Opt Out" to open the form. Form is pre-filled. Solve reCAPTCHA → submit → verify email → on next page fill DOB + address → find record → check box → solve reCAPTCHA again → submit. Also removes FastPeopleSearch, TruePeopleSearch, SearchPeopleFree.',
-  },
-  {
-    id: 'fastpeoplesearch', name: 'FastPeopleSearch',
-    url: 'https://www.fastpeoplesearch.com/removal',
-    covered: true,
-    instructions: 'Covered by the PeopleFinders opt-out above.',
-  },
-  {
-    id: 'truepeoplesearch', name: 'TruePeopleSearch',
-    url: 'https://www.truepeoplesearch.com/removal',
-    covered: true,
-    instructions: 'Covered by the PeopleFinders opt-out above.',
-  },
-  {
-    id: 'searchpeoplefree', name: 'SearchPeopleFree',
-    url: 'https://www.searchpeoplefree.com/opt-out',
-    covered: true,
-    instructions: 'Covered by the PeopleFinders opt-out above.',
-  },
-
-  // ── FamilyTreeNow ─────────────────────────────────────────────────────────
+  // ── FamilyTreeNow — Cloudflare-blocked as of 2026-05-13 ──────────────────
   {
     id: 'familytreenow', name: 'FamilyTreeNow',
     url: 'https://www.familytreenow.com/optout',
-    emailOnly: false,
-    selectors: {
-      // id-based selectors — confirmed accurate
-      firstName: 'input[id="FirstName"][name="FirstName"]',
-      lastName:  'input[id="LastName"][name="LastName"]',
-      email:     'input[id="Email"][name="Email"]',
-      submit:    'button[type="submit"]',
-    },
-    instructions: 'Form is pre-filled. Solve BOTH the reCAPTCHA AND hCaptcha on this page → click "Begin Privacy Request" → verify email → find and opt out your record.',
+    manual: true,
+    instructions: 'Cloudflare-protected — must open manually. Fill first name, last name, email → solve hCaptcha → click Begin Privacy Request → verify email → find and opt out your record.',
   },
 
-  // ── Remaining search-first sites ──────────────────────────────────────────
-  {
-    id: 'checkpeople', name: 'CheckPeople',
-    url: 'https://checkpeople.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → click your record → Remove Record → confirm via email.',
-  },
-  {
-    id: 'neighborwho', name: 'NeighborWho',
-    url: 'https://neighborwho.com/opt-out',
-    covered: true,
-    instructions: 'Covered by the PeopleConnect Suppression Center entry.',
-  },
-  {
-    id: 'voterrecords', name: 'VoterRecords',
-    url: 'https://www.voterrecords.com/optout',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find your record → Opt Out → confirm via email.',
-  },
-  {
-    id: 'recordsfinder', name: 'RecordsFinder',
-    url: 'https://recordsfinder.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find listing → Opt Out → confirm via email.',
-  },
-  {
-    id: 'officialusa', name: 'OfficialUSA',
-    url: 'https://www.officialusa.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out.',
-  },
-  {
-    id: 'idtrue', name: 'IDTrue',
-    url: 'https://www.idtrue.com/optout/',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find listing → Opt Out → confirm via email.',
-  },
-  {
-    id: 'uncoverthetruth', name: 'UncoverTheTruth',
-    url: 'https://www.uncoverthetruth.com/opt-out/',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out → confirm via email.',
-  },
-  {
-    id: 'cyberbackgroundchecks', name: 'CyberBackground Checks',
-    url: 'https://www.cyberbackgroundchecks.com/removal',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Remove → confirm via email.',
-  },
-  {
-    id: 'smartbackgroundchecks', name: 'SmartBackground Checks',
-    url: 'https://www.smartbackgroundchecks.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out → confirm via email.',
-  },
-  {
-    id: 'infotracer', name: 'InfoTracer',
-    url: 'https://infotracer.com/opt-out/',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out → confirm via email.',
-  },
-  {
-    id: 'councilon', name: 'CouncilOn',
-    url: 'https://councilon.com/optout',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out.',
-  },
-  {
-    id: 'personsearchers', name: 'PersonSearchers',
-    url: 'https://personsearchers.com/optout/',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out.',
-  },
-  {
-    id: 'freepeopledirectory', name: 'FreePeopleDirectory',
-    url: 'https://www.freepeopledirectory.com/optout',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out.',
-  },
-  {
-    id: 'peopleby', name: 'PeopleBy',
-    url: 'https://www.peopleby.com/optout',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out.',
-  },
-  {
-    id: 'peoplebyname', name: 'PeopleByName',
-    url: 'https://www.peoplebyname.com/remove.php',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[name="fname"]', lastName: 'input[name="lastName"], input[name="lname"]', state: 'select[name="state"]', submit: 'button[type="submit"], input[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → check the box next to your record → Send Opt-Out → confirm via email.',
-  },
-  {
-    id: 'peoplesearchnow', name: 'PeopleSearchNow',
-    url: 'https://www.peoplesearchnow.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out → confirm via email.',
-  },
-  {
-    id: 'arrestfacts', name: 'ArrestFacts',
-    url: 'https://arrestfacts.com/optout',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out → confirm via email.',
-  },
-  {
-    id: 'usatrace', name: 'USATrace',
-    url: 'https://www.usatrace.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out → confirm via email.',
-  },
-  {
-    id: 'lookupanyone', name: 'LookupAnyone',
-    url: 'https://lookupanyone.com/optout',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out → confirm via email.',
-  },
-  {
-    id: 'quickpeopletrace', name: 'QuickPeopleTrace',
-    url: 'https://www.quickpeopletrace.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out → confirm via email.',
-  },
-  {
-    id: 'privateeyesite', name: 'PrivateEye',
-    url: 'https://www.privateeye.com/opt-out/',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out → confirm via email.',
-  },
-  {
-    id: 'usidentify', name: 'USIdentify',
-    url: 'https://www.usidentify.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out → confirm via email.',
-  },
-  {
-    id: 'newenglandfacts', name: 'NewEnglandFacts',
-    url: 'https://newenglandfacts.com/optout',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out → confirm via email.',
-  },
-  {
-    id: 'purecriminals', name: 'PureCriminals',
-    url: 'https://purecriminals.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out.',
-  },
-  {
-    id: 'verecord', name: 'VeRecord',
-    url: 'https://verecord.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out.',
-  },
-  {
-    id: 'waatp', name: 'WAATP',
-    url: 'https://www.waatp.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out.',
-  },
-  {
-    id: 'criminalwatchdog', name: 'CriminalWatchdog',
-    url: 'https://www.criminalwatchdog.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out.',
-  },
-  {
-    id: 'freepeoplesearch', name: 'FreePeopleSearch',
-    url: 'https://freepeoplesearch.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out.',
-  },
-  {
-    id: 'peoplefinderlocator', name: 'PeopleFinderLocator',
-    url: 'https://www.peoplefinderlocator.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out.',
-  },
-  {
-    id: 'locatefamily', name: 'LocateFamily',
-    url: 'https://www.locatefamily.com/optout',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Search → find record → Opt Out → confirm via email.',
-  },
-  {
-    id: 'staterecords', name: 'StateRecords',
-    url: 'https://www.staterecords.org/optout.php',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[name="fname"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[name="lname"], input[placeholder*="Last" i]', state: 'select[name="state"]', email: 'input[type="email"]', submit: 'button[type="submit"], input[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find record → Opt Out → confirm via email.',
-  },
-  {
-    id: 'peoplefinder', name: 'PeopleFinder',
-    url: 'https://www.peoplefinder.com/people_removal/',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[id="firstName"]', lastName: 'input[name="lastName"], input[id="lastName"]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → check box next to your record → Send Opt-Out Request → confirm via email.',
-  },
-  {
-    id: 'peekyou', name: 'PeekYou',
-    url: 'https://www.peekyou.com/about/contact/optout/',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"], input[type="submit"]' },
-    instructions: 'Form pre-filled. Select your state → Search → find your profile → Remove → confirm via email.',
-  },
-  {
-    id: 'spyfly', name: 'SpyFly',
-    url: 'https://www.spyfly.com/help-center/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Verify name, state, email → Submit → confirm via email.',
-  },
-  {
-    id: 'peoplelookup', name: 'PeopleLookup',
-    url: 'https://www.peoplelookup.com/opt-out',
-    covered: true,
-    instructions: 'Covered by the PeopleConnect Suppression Center entry.',
-  },
-  {
-    id: 'freebackgroundcheck', name: 'FreeBackgroundCheck',
-    url: 'https://www.freebackgroundcheck.org/opt_out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select state → verify email → Submit → confirm via email.',
-  },
-  {
-    id: 'advancedbackgroundchecks', name: 'AdvancedBGChecks',
-    url: 'https://www.advancedbackgroundchecks.com/removal',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', email: 'input[type="email"]', submit: 'button[type="submit"], input[type="submit"]' },
-    instructions: 'Form pre-filled. Verify fields → Search → select record → confirm via email.',
-  },
+  // ── SearchQuarry — DOM verified 2026-05-13: uses long ASP.NET model-binding IDs ─
   {
     id: 'searchquarry', name: 'SearchQuarry',
-    url: 'https://www.searchquarry.com/optout/',
+    url: 'https://members.searchquarry.com/opt-out',
     emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select state → Search → select record → confirm opt-out.',
-  },
-  {
-    id: 'centeda', name: 'Centeda',
-    url: 'https://centeda.com/ng/control/privacy',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select state → Search → find record → Opt Out → confirm via email.',
-  },
-  {
-    id: 'findpeoplefast', name: 'FindPeopleFast',
-    url: 'https://www.findpeoplefast.net/optout',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select state → Search → find record → Opt Out.',
-  },
-  {
-    id: 'peoplefindfast', name: 'PeopleFindFast',
-    url: 'https://www.peoplefindfast.com/optout',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select state → Search → find record → Opt Out.',
-  },
-  {
-    id: 'checkruns', name: 'CheckRuns',
-    url: 'https://www.checkruns.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select state → Search → find record → Opt Out.',
-  },
-  {
-    id: 'thetrueseeker', name: 'TheTrueSeeker',
-    url: 'https://www.thetrueseeker.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select state → Search → find record → Opt Out → confirm via email.',
-  },
-  {
-    id: 'bebackgroundcheck', name: 'BeBackgroundCheck',
-    url: 'https://www.bebackgroundcheck.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select state → Search → select your record → confirm via email.',
-  },
-  {
-    id: 'freepeopleidcheck', name: 'FreePeopleIDCheck',
-    url: 'https://freepeopleidcheck.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select state → verify email → Submit → confirm via email.',
-  },
-  {
-    id: 'privatereports', name: 'PrivateReports',
-    url: 'https://privatereports.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select state → Search → find record → Opt Out.',
-  },
-  {
-    id: 'publicrecordsofficial', name: 'PublicRecordsOfficial',
-    url: 'https://www.publicrecordsofficial.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select state → Search → find record → Opt Out.',
-  },
-  {
-    id: 'criminalbg', name: 'CriminalBG',
-    url: 'https://criminalbg.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select state → verify email → Submit → confirm via email.',
-  },
-  {
-    id: 'backgroundcheck', name: 'BackgroundCheck.run',
-    url: 'https://backgroundcheck.run/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', state: 'select[name="state"]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Select state → verify email → Submit → confirm via email.',
-  },
-  {
-    id: 'mugshotsonline', name: 'MugshotsOnline',
-    url: 'https://mugshotsonline.com/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"], input[type="submit"]' },
-    instructions: 'Form pre-filled. Verify name and email → Submit → confirm via email.',
-  },
-  {
-    id: 'arrest', name: 'Arrest.org',
-    url: 'https://arrest.org/opt-out',
-    emailOnly: false,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Form pre-filled. Verify name and email → Submit → confirm via email.',
+    selectors: {
+      firstName: 'input#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_fname',
+      lastName:  'input#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_lname',
+      state:     'select#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_state',
+      city:      'input#InfoPay_Core_Components_OptOuts_DataRemovalServiceModel_city',
+      submit:    'button.form-btn',
+    },
+    instructions: 'Form is pre-filled. Click Submit → find your record → confirm opt-out.',
   },
 
-  // ══════════════════════════════════════════════════════════════════════
-  // EMAIL-ONLY (background tab — fully automated, no name search step)
-  // ══════════════════════════════════════════════════════════════════════
-
-  {
-    id: 'nuwber', name: 'Nuwber',
-    url: 'https://nuwber.com/removal/link',
-    emailOnly: true,
-    selectors: { email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills email → Submit → confirm via email link.',
-  },
+  // ── ThatsThem — Spokeo-operated, confirmed working (full name + address + phone) ─
   {
     id: 'thatsthem', name: "That'sThem",
     url: 'https://thatsthem.com/optout',
-    emailOnly: true,
-    selectors: { email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills email → Opt Out → confirm via email link.',
+    emailOnly: false,
+    selectors: {
+      fullName: 'input[placeholder="John Smith"]',
+      street:   'input[placeholder="123 Main St"]',
+      city:     'input[placeholder="Seattle"]',
+      state:    'select',
+      zip:      'input[placeholder="98101"]',
+      email:    'input[placeholder="john@example.com"]',
+      phone:    'input[placeholder="(206) 555-1234"]',
+      submit:   'button[type="submit"]',
+    },
+    instructions: 'Form is pre-filled with your details. Click Submit Opt-Out Request.',
   },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // EMAIL-ONLY (background tab — confirmed working, auto-closes)
+  // ══════════════════════════════════════════════════════════════════════
+
+  // ── CheckPeople — DOM verified 2026-05-13 ─────────────────────────────────
+  // Requires: email (input#requestorEmail) + consent checkbox (input#acknowledge).
+  // Button (button.cp-auto-optout__button) enables after both are filled.
+  {
+    id: 'checkpeople', name: 'CheckPeople',
+    url: 'https://checkpeople.com/opt-out',
+    emailOnly: true,
+    selectors: {
+      email:    'input#requestorEmail',
+      checkbox: 'input#acknowledge',
+      submit:   'button.cp-auto-optout__button',
+    },
+    instructions: 'Auto-fills email + checks consent → Continue → verify via email link.',
+  },
+  // ── FreePeopleSearch — DOM verified 2026-05-13 ───────────────────────────
+  // Same pattern as CheckPeople. Submit is <input type="submit"> not <button>.
+  {
+    id: 'freepeoplesearch', name: 'FreePeopleSearch',
+    url: 'https://freepeoplesearch.com/opt-out',
+    emailOnly: true,
+    selectors: {
+      email:    'input#requestorEmail',
+      checkbox: 'input#acknowledge',
+      submit:   'input.fps-auto-optout__button',
+    },
+    instructions: 'Auto-fills email + checks consent → Continue → verify via email link.',
+  },
+  // ── OfficialUSA — DOM verified 2026-05-13 ───────────────────────────────
+  // Has Cloudflare Turnstile that auto-solves in real Chrome (~2-5s).
+  // Button (button.fndprs) stays disabled until Turnstile completes.
+  // optout.js clickWhenReady retries up to 20s to handle Turnstile delay.
+  {
+    id: 'officialusa', name: 'OfficialUSA',
+    url: 'https://www.officialusa.com/opt-out/',
+    emailOnly: true,
+    selectors: {
+      email:  'input[name="inputEmail"]',
+      submit: 'button.fndprs',
+    },
+    instructions: 'Auto-fills email → waits for Turnstile → Next Step → opt-out submitted.',
+  },
+  // ── ClustrMaps — DOM verified 2026-05-13 ────────────────────────────────
+  // Same backend/Turnstile as OfficialUSA.
   {
     id: 'clustrmaps', name: 'ClustrMaps',
     url: 'https://clustrmaps.com/bl/opt-out',
     emailOnly: true,
-    selectors: { email: 'input[type="email"], input[name="email"]', submit: 'button[type="submit"], input[type="submit"]' },
-    instructions: 'Auto-fills email → Submit → confirm via email link.',
+    selectors: {
+      email:  'input[name="inputEmail"]',
+      submit: 'button.submit-comment',
+    },
+    instructions: 'Auto-fills email → waits for Turnstile → Next Step → verify via email link.',
+  },
+
+  // ══════════════════════════════════════════════════════════════════════
+  // MANUAL — Cloudflare-blocked, needs profile URL, or multi-step CAPTCHA
+  // ══════════════════════════════════════════════════════════════════════
+
+  {
+    id: 'beenverified', name: 'BeenVerified',
+    url: 'https://www.beenverified.com/app/optout/search',
+    manual: true,
+    instructions: 'Cloudflare-protected — must open manually. Search your name → select your record → Opt Out → confirm via email.',
   },
   {
-    id: 'dobsearch', name: 'DOBSearch',
-    url: 'https://www.dobsearch.com/remove-my-info',
-    emailOnly: true,
-    selectors: { email: 'input[type="email"], input[name="email"]', submit: 'button[type="submit"], input[type="submit"]' },
-    instructions: 'Auto-fills email → Submit → confirm via email link.',
+    id: 'peoplesmart', name: 'PeopleSmart',
+    url: 'https://www.peoplesmart.com/optout-go',
+    manual: true,
+    instructions: 'BeenVerified network — must open manually. Search your name → select record → confirm via email.',
   },
+  { id: 'backgroundalert', name: 'BackgroundAlert', url: 'https://www.backgroundalert.com/optout/', covered: true, instructions: 'Covered by BeenVerified / PeopleSmart network.' },
+
+  {
+    id: 'nuwber', name: 'Nuwber',
+    url: 'https://nuwber.com/removal/link',
+    manual: true,
+    instructions: 'Cloudflare-protected — must open manually. Enter email → click removal link in email.',
+  },
+  {
+    id: 'peoplefinders', name: 'PeopleFinders',
+    url: 'https://www.peoplefinders.com/opt-out',
+    manual: true,
+    instructions: 'Cloudflare-protected — must open manually. Enter name → search → select record → Opt Out → verify email. Also removes FastPeopleSearch, TruePeopleSearch, SearchPeopleFree.',
+  },
+  { id: 'fastpeoplesearch', name: 'FastPeopleSearch', url: 'https://www.fastpeoplesearch.com/removal',  covered: true, instructions: 'Covered by PeopleFinders opt-out above.' },
+  { id: 'truepeoplesearch', name: 'TruePeopleSearch', url: 'https://www.truepeoplesearch.com/removal',  covered: true, instructions: 'Covered by PeopleFinders opt-out above.' },
+  { id: 'searchpeoplefree', name: 'SearchPeopleFree', url: 'https://www.searchpeoplefree.com/opt-out', covered: true, instructions: 'Covered by PeopleFinders opt-out above.' },
+
   {
     id: 'golookup', name: 'GoLookUp',
     url: 'https://golookup.com/opt-out',
-    emailOnly: true,
-    selectors: { email: 'input[type="email"], input[name="email"]', submit: 'button[type="submit"], input[type="submit"]' },
-    instructions: 'Auto-fills email → Submit → confirm via email link.',
+    manual: true,
+    instructions: 'Cloudflare-protected — must open manually. Enter email → verify.',
   },
   {
-    id: 'socialcatfish', name: 'Social Catfish',
-    url: 'https://socialcatfish.com/optout/',
-    emailOnly: true,
-    selectors: { email: 'input[type="email"], input[name="email"]', submit: 'button[type="submit"], input[type="submit"]' },
-    instructions: 'Auto-fills email → Opt Out → confirm via email link.',
+    id: 'cyberbackgroundchecks', name: 'CyberBackgroundChecks',
+    url: 'https://www.cyberbackgroundchecks.com/removal',
+    manual: true,
+    instructions: 'Cloudflare-protected — must open manually. Search name → select record → Remove → verify email.',
   },
-  {
-    id: 'dataveria', name: 'Dataveria',
-    url: 'https://dataveria.com/optout',
-    emailOnly: true,
-    selectors: { email: 'input[type="email"], input[name="email"]', submit: 'button[type="submit"], input[type="submit"]' },
-    instructions: 'Auto-fills email → Submit → confirm via email link.',
-  },
-  {
-    id: 'inforver', name: 'Inforver',
-    url: 'https://www.inforver.com/control/privacy',
-    emailOnly: true,
-    selectors: { email: 'input[type="email"], input[name="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills email → Remove My Info → confirm via email.',
-  },
-  {
-    id: 'rehold', name: 'Rehold',
-    url: 'https://rehold.com/optout',
-    emailOnly: true,
-    selectors: { email: 'input[type="email"], input[name="email"]', submit: 'button[type="submit"], input[type="submit"]' },
-    instructions: 'Auto-fills email → Submit → confirm via email link.',
-  },
-  {
-    id: 'searchbug', name: 'SearchBug',
-    url: 'https://www.searchbug.com/opt-out/',
-    emailOnly: true,
-    selectors: { email: 'input[type="email"], input[name="email"]', submit: 'button[type="submit"], input[type="submit"]' },
-    instructions: 'Auto-fills email → Submit → confirm via email link.',
-  },
-  {
-    id: 'homemetry', name: 'Homemetry',
-    url: 'https://homemetry.com/opt-out',
-    emailOnly: true,
-    selectors: { email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills email → Submit → confirm via email link.',
-  },
-  {
-    id: 'publicrecordsnow', name: 'PublicRecordsNow',
-    url: 'https://www.publicrecordsnow.com/static/view/optout',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"], input[type="submit"]' },
-    instructions: 'Auto-fills name and email. Solve CAPTCHA if shown → Submit → confirm via email.',
-  },
-  {
-    id: 'usphonebook', name: 'US Phone Book',
-    url: 'https://www.usphonebook.com/opt-out',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"], input[type="submit"]' },
-    instructions: 'Auto-fills name and email → Submit → confirm via email link.',
-  },
-  {
-    id: 'ownerly', name: 'Ownerly',
-    url: 'https://www.ownerly.com/opt-out',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills name and email → Submit → confirm via email link.',
-  },
-  {
-    id: 'yoname', name: 'YoName',
-    url: 'https://yoname.com/opt-out',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills name and email → Submit → confirm via email.',
-  },
-  {
-    id: 'vitalrec', name: 'VitalRec',
-    url: 'https://www.vitalrec.com/opt-out',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills name and email → Submit → confirm via email.',
-  },
-  {
-    id: 'blackbookonline', name: 'BlackBook Online',
-    url: 'https://www.blackbookonline.info/BBOOL-Optout.aspx',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'input[type="submit"], button[type="submit"]' },
-    instructions: 'Auto-fills name and email. Solve CAPTCHA → Submit → confirm via email.',
-  },
-  {
-    id: 'suretrace', name: 'SureTrace',
-    url: 'https://suretrace.com/opt-out',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills name and email → Submit → confirm via email.',
-  },
-  {
-    id: 'usapeople', name: 'USAPeople',
-    url: 'https://usapeople.us/optout',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills name and email → Submit → confirm via email.',
-  },
-  {
-    id: 'spydialer', name: 'SpyDialer',
-    url: 'https://www.spydialer.com/optout.aspx',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"], input[type="submit"]' },
-    instructions: 'Auto-fills name and email. Solve CAPTCHA → Submit → confirm via email.',
-  },
-  {
-    id: 'yasni', name: 'Yasni',
-    url: 'https://www.yasni.com/optout',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills name and email → Submit → confirm via email.',
-  },
-  {
-    id: 'phonebooks', name: 'Phonebooks.com',
-    url: 'https://www.phonebooks.com/opt-out',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills name and email → Submit → confirm via email.',
-  },
-  {
-    id: 'pub360', name: 'Pub360',
-    url: 'https://pub360.com/optout',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills name and email → Submit → confirm via email.',
-  },
-  {
-    id: 'reversephonelookup', name: 'ReversePhoneLookup',
-    url: 'https://www.reversephonelookup.com/opt-out',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills name and email → Submit → confirm via email.',
-  },
-  {
-    id: 'virtualpeoplefinder', name: 'VirtualPeopleFinder',
-    url: 'https://www.virtualpeoplefinder.com/optout',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills name and email → Submit → confirm via email.',
-  },
-  {
-    id: 'bumper', name: 'Bumper',
-    url: 'https://bumper.com/opt-out',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills name and email → Submit → confirm via email.',
-  },
-  {
-    id: 'lullar', name: 'Lullar',
-    url: 'https://lullar.com/en/optout',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills name and email → Remove → confirm via email.',
-  },
-  {
-    id: 'peoplerocket', name: 'PeopleRocket',
-    url: 'https://www.peoplerocket.com/opt-out',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills name and email → Submit → confirm via email.',
-  },
-  {
-    id: 'numericphone', name: 'NumericPhone',
-    url: 'https://www.numericphone.com/opt-out',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills name and email → Submit → confirm via email.',
-  },
-  {
-    id: 'arivify', name: 'Arivify',
-    url: 'https://arivify.com/opt-out',
-    emailOnly: true,
-    selectors: { firstName: 'input[name="firstName"], input[placeholder*="First" i]', lastName: 'input[name="lastName"], input[placeholder*="Last" i]', email: 'input[type="email"]', submit: 'button[type="submit"]' },
-    instructions: 'Auto-fills name and email → Submit → confirm via email.',
-  },
-
-  // ══════════════════════════════════════════════════════════════════════
-  // MANUAL — need phone verification, profile URL lookup, or heavy CAPTCHA
-  // ══════════════════════════════════════════════════════════════════════
-
   {
     id: 'spokeo', name: 'Spokeo',
     url: 'https://www.spokeo.com/optout',
     manual: true,
-    selectors: null,
-    instructions: '1. Go to spokeo.com and search your name. 2. Open your listing and copy the URL. 3. On the opt-out page, paste the URL into the URL field. 4. Enter your email. 5. Solve reCAPTCHA. 6. Click Opt Out. 7. Confirm via email.',
+    instructions: '1. Search your name on spokeo.com and open your listing. 2. Copy the profile URL. 3. Paste it into the opt-out URL field. 4. Enter email. 5. Click Opt Out → confirm via email.',
   },
   {
     id: 'whitepages', name: 'WhitePages',
     url: 'https://www.whitepages.com/suppression-requests',
     manual: true,
-    selectors: null,
-    instructions: '1. Search your name on whitepages.com and copy your listing URL. 2. Paste it into the suppression form. 3. Solve reCAPTCHA. 4. Enter your phone number — you will receive an automated call. 5. Press 1 to confirm removal.',
+    instructions: '1. Find your listing on whitepages.com and copy the URL. 2. Paste it into the suppression form. 3. Solve reCAPTCHA. 4. Enter phone number — you\'ll get an automated call. 5. Press 1 to confirm removal.',
   },
   {
     id: 'radaris', name: 'Radaris',
     url: 'https://radaris.com/control-privacy',
     manual: true,
-    selectors: null,
-    instructions: '1. Search your name on radaris.com. 2. Click your profile. 3. Click ⋮ menu → Control Info → Remove Info. 4. Enter email. 5. Solve reCAPTCHA. 6. Submit → confirm via email.',
+    instructions: '1. Search your name on radaris.com. 2. Open your profile. 3. Click ⋮ → Control Info → Remove Info. 4. Enter email → solve reCAPTCHA → confirm via email.',
   },
   {
     id: 'mylife', name: 'MyLife',
     url: 'https://mylife.jotform.com/260284407610047',
     manual: true,
-    selectors: null,
-    instructions: '1. Fill in your name, email, birth year, and address on this JotForm. 2. Optionally enter your MyLife profile URL. 3. Solve reCAPTCHA. 4. Click Submit. No email confirmation needed.',
+    instructions: '1. Fill in name, email, birth year, and address on the JotForm. 2. Optionally paste your MyLife profile URL. 3. Solve reCAPTCHA. 4. Click Submit.',
   },
   {
     id: 'acxiom', name: 'Acxiom',
-    url: 'https://isapps.acxiom.com/optout/optout.aspx',
+    url: 'https://www.acxiom.com/optout/',
     manual: true,
-    selectors: null,
-    instructions: '1. Check the data removal boxes. 2. Select "Me". 3. Fill in your name, email, and address fields. 4. Solve reCAPTCHA. 5. Click Submit.',
-  },
-  {
-    id: 'zoominfo', name: 'ZoomInfo',
-    url: 'https://www.zoominfo.com/about/privacy/profile-and-data',
-    manual: true,
-    selectors: null,
-    instructions: '1. Click "Manage Your Profile". 2. Enter your email. 3. Click the verification link emailed to you. 4. Follow the removal steps.',
+    instructions: '1. On the Acxiom Privacy Center, fill your name, email, and address in the "US Individual Opt Out" form. 2. Check the consent box. 3. Click Submit. 4. Confirm via email.',
   },
   {
     id: 'idcrawl', name: 'IDCrawl',
     url: 'https://www.idcrawl.com/opt-out',
     manual: true,
-    selectors: null,
-    instructions: '1. Go to idcrawl.com and search your name. 2. Copy your profile URL. 3. On the opt-out page, paste your profile URL. 4. Enter your email. 5. Click Submit → confirm via email.',
+    instructions: '1. Search your name on idcrawl.com. 2. Copy your profile URL. 3. On the opt-out page, paste the URL + enter email. 4. Solve reCAPTCHA. 5. Click Submit → confirm via email.',
   },
   {
-    id: 'xlek', name: 'Xlek',
-    url: 'https://www.xlek.com/optout.php',
+    id: 'advancedbackgroundchecks', name: 'AdvancedBGChecks',
+    url: 'https://www.advancedbackgroundchecks.com/removal',
     manual: true,
-    selectors: null,
-    instructions: '1. Fill in your name, email, city, and state. 2. Solve CAPTCHA. 3. Click Submit. No email confirmation.',
+    instructions: '1. Fill first name, last name, and email. 2. Check the authorization box. 3. Solve reCAPTCHA. 4. Click "Begin Removal Process". 5. Click the emailed link → complete details on the next form.',
   },
   {
-    id: 'addresses', name: 'Addresses.com',
-    url: 'https://www.addresses.com/optout',
-    covered: true,
-    instructions: 'Covered by the PeopleConnect Suppression Center entry.',
+    id: 'spydialer', name: 'SpyDialer',
+    url: 'https://www.spydialer.com/consumers/',
+    manual: true,
+    instructions: '1. Click "Start". 2. Enter your phone number in the wizard. 3. Confirm removal.',
   },
   {
-    id: 'backgroundalert', name: 'BackgroundAlert',
-    url: 'https://www.backgroundalert.com/optout/',
-    covered: true,
-    instructions: 'Covered by the BeenVerified / PeopleSmart network entry.',
+    id: 'freepeopledirectory', name: 'FreePeopleDirectory',
+    url: 'https://www.freepeopledirectory.com/optout',
+    manual: true,
+    instructions: '1. Find your profile on freepeopledirectory.com and copy the URL. 2. Paste it into the removal form. 3. Click Submit.',
   },
+  {
+    id: 'zoominfo', name: 'ZoomInfo',
+    url: 'https://www.zoominfo.com/privacy-center/privacy/profile-opt-out',
+    manual: true,
+    instructions: '1. Click "Manage Your Profile". 2. Enter your email. 3. Click the verification link. 4. Follow removal steps.',
+  },
+
 ];
