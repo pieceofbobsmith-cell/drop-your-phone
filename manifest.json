@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Drop Your Phone",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "minimum_chrome_version": "109",
   "description": "Block cookie trackers and opt out of data brokers. A social justice art piece about ICE and data broker surveillance.",
   "permissions": ["activeTab", "alarms", "scripting", "storage", "tabs"],
@@ -9,11 +9,6 @@
     "service_worker": "background.js"
   },
   "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "run_at": "document_idle"
-    },
     {
       "matches": [
         "https://suppression.peopleconnect.us/*",
@@ -29,7 +24,7 @@
         "https://www.publicinfoservices.com/*",
         "https://www.privaterecords.net/*"
       ],
-      "js": ["brokers.js", "optout.js"],
+      "js": ["content.js", "brokers.js", "optout.js"],
       "run_at": "document_idle"
     }
   ],
