@@ -125,13 +125,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.alarms.create('optoutTabClose', { delayInMinutes: 15 });
   }
 
-  // optout.js signals submit was clicked — set a 1-min alarm so the tab
-  // closes shortly after the confirmation page loads. This fires even if the
-  // form navigated away and killed the content script (no double-close risk:
-  // if the tab is already gone, optoutTabId is null and the alarm does nothing).
+  // optout.js signals submit was clicked — close the tab immediately so the
+  // next broker opens without delay. The 1-min alarm set by openNextOptout
+  // is the fallback if this message is never received (e.g. page navigated
+  // and killed the content script before the message could be sent).
   if (message.type === 'CLOSE_ME' && sender.tab) {
-    chrome.alarms.clear('optoutTabClose');
-    chrome.alarms.create('optoutTabClose', { delayInMinutes: 1 });
+    chrome.tabs.remove(sender.tab.id).catch(() => {});
   }
 
   return true;
