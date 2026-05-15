@@ -2,13 +2,18 @@
 
 let blockedCount = 0;
 let blockingEnabled = true;
+let cookieClearEnabled = true;
 let optoutTabId = null; // ID of the one opt-out tab currently open
 let optoutPaused = false;
 
+// Tracks the last URL seen in each tab so we can clean up when the tab leaves
+const tabUrlMap = new Map();
+
 // Restore persisted state on startup (service worker can be killed and restarted by Chrome)
-chrome.storage.local.get(['blockingEnabled', 'blockedCount', 'optoutTabId', 'optoutPaused'], (r) => {
+chrome.storage.local.get(['blockingEnabled', 'blockedCount', 'cookieClearEnabled', 'optoutTabId', 'optoutPaused'], (r) => {
   blockingEnabled = r.blockingEnabled !== false;
   blockedCount = r.blockedCount || 0;
+  cookieClearEnabled = r.cookieClearEnabled !== false;
   optoutPaused = r.optoutPaused === true;
   updateBadge();
 
@@ -38,8 +43,36 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
-// When the opt-out tab closes, open the next one in the queue
+// Track tab URL changes so we know where to clean up cookies when a tab leaves
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'loading' && changeInfo.url) {
+    const oldUrl = tabUrlMap.get(tabId);
+    tabUrlMap.set(tabId, changeInfo.url);
+    if (oldUrl && cookieClearEnabled) {
+      try {
+        const oldBase = getBaseDomain(new URL(oldUrl).hostname);
+        const newBase = getBaseDomain(new URL(changeInfo.url).hostname);
+        if (oldBase !== newBase) clearTrackingCookies(oldUrl);
+      } catch (_) {}
+    }
+  }
+});
+
+// When the opt-out tab closes, open the next one in the queue.
+// Also clear tracking cookies for any regular tab that closes.
 chrome.tabs.onRemoved.addListener((tabId) => {
+  // Cookie cleanup for regular tabs
+  const lastUrl = tabUrlMap.get(tabId);
+  tabUrlMap.delete(tabId);
+  if (lastUrl && cookieClearEnabled) {
+    chrome.storage.local.get(['optoutTabId'], (r) => {
+      // Don't wipe cookies on opt-out tabs — they're filling forms on broker sites
+      const isOptout = tabId === (r.optoutTabId || optoutTabId);
+      if (!isOptout) clearTrackingCookies(lastUrl);
+    });
+  }
+
+  // Opt-out queue advancement
   chrome.storage.local.get(['optoutTabId'], (r) => {
     const trackedId = r.optoutTabId || optoutTabId;
     if (tabId === trackedId) {
@@ -133,6 +166,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.tabs.remove(sender.tab.id).catch(() => {});
   }
 
+  if (message.type === 'SET_COOKIE_CLEAR') {
+    cookieClearEnabled = message.enabled;
+    chrome.storage.local.set({ cookieClearEnabled });
+    sendResponse({ success: true });
+  }
+
   return true;
 });
 
@@ -170,12 +209,44 @@ function openNextOptout() {
       chrome.tabs.create({ url, active: !emailOnly }, (tab) => {
         optoutTabId = tab.id;
         chrome.storage.local.set({ optoutTabId: tab.id });
-        // Email-only: 1 min fallback (optout.js closes it after ~8s on success)
-        // Search-first: 10 min so user has time to find + select their record
-        chrome.alarms.create('optoutTabClose', { delayInMinutes: emailOnly ? 1 : 10 });
+        // Email-only: 3 min fallback (optout.js closes after success detection, up to 15s + 2s grace)
+        // Search-first: 15 min so user has time to find + select their record
+        chrome.alarms.create('optoutTabClose', { delayInMinutes: emailOnly ? 3 : 15 });
       });
     });
   });
+}
+
+// ── Cookie auto-clear helpers ─────────────────────────────────────────────────
+
+function getBaseDomain(hostname) {
+  const parts = hostname.split('.');
+  // Handle known second-level TLDs (co.uk, com.au, etc.) — good enough heuristic
+  if (parts.length > 2 && parts[parts.length - 2].length <= 3) {
+    return parts.slice(-3).join('.');
+  }
+  return parts.slice(-2).join('.');
+}
+
+// Delete persistent cookies (ones with an expiration date set far in the future)
+// from the given URL's domain. Session cookies (no expiry) are left alone.
+// Persistent cookies = what ad/tracking networks set after "Accept all".
+async function clearTrackingCookies(url) {
+  if (!url || !url.startsWith('http')) return;
+  try {
+    const cutoff = (Date.now() / 1000) + (24 * 3600); // cookies expiring > 24h from now
+    const cookies = await chrome.cookies.getAll({ url });
+    for (const cookie of cookies) {
+      if (cookie.expirationDate && cookie.expirationDate > cutoff) {
+        const scheme = cookie.secure ? 'https' : 'http';
+        const domain = cookie.domain.replace(/^\./, '');
+        await chrome.cookies.remove({
+          url: `${scheme}://${domain}${cookie.path}`,
+          name: cookie.name,
+        }).catch(() => {});
+      }
+    }
+  } catch (_) {}
 }
 
 function updateBadge() {
