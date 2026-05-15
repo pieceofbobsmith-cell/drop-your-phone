@@ -1,6 +1,7 @@
 // popup.js
 document.addEventListener('DOMContentLoaded', () => {
-  const toggle      = document.getElementById('blockingToggle');
+  const toggle            = document.getElementById('blockingToggle');
+  const cookieClearToggle = document.getElementById('cookieClearToggle');
   const countEl     = document.getElementById('blockedCount');
   const playBtn     = document.getElementById('playBtn');
   const firstNameEl = document.getElementById('ooFirstName');
@@ -46,6 +47,14 @@ document.addEventListener('DOMContentLoaded', () => {
       countEl.textContent = response.blockedCount || 0;
       if (response.blockingEnabled !== false) injectContentScript();
     }
+  });
+
+  // ── Cookie auto-clear toggle ──────────────────────────────────────
+  chrome.storage.local.get(['cookieClearEnabled'], ({ cookieClearEnabled }) => {
+    cookieClearToggle.checked = cookieClearEnabled !== false;
+  });
+  cookieClearToggle.addEventListener('change', () => {
+    chrome.runtime.sendMessage({ type: 'SET_COOKIE_CLEAR', enabled: cookieClearToggle.checked });
   });
 
   chrome.storage.onChanged.addListener((changes, area) => {
