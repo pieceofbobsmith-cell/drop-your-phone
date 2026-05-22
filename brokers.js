@@ -374,19 +374,6 @@ const BROKERS = [
     },
   },
 
-  // ── DobSearch ─────────────────────────────────────────────────────────────
-  {
-    id: 'dobsearch', name: 'DobSearch',
-    url: 'https://www.dobsearch.com/people-finder/opt_out.php',
-    emailOnly: true,
-    selectors: {
-      firstName: 'input[name="firstName"], input[name="fname"], input[placeholder*="first" i]',
-      lastName:  'input[name="lastName"], input[name="lname"], input[placeholder*="last" i]',
-      email:     'input[name="email"], input[type="email"]',
-      submit:    'button[type="submit"], input[type="submit"], input[name="submit"]',
-    },
-  },
-
   // ── USA People Search ─────────────────────────────────────────────────────
   {
     id: 'usapeoplesearch', name: 'USA People Search',
@@ -523,8 +510,8 @@ const BROKERS = [
     url: 'https://optout.liveramp.com/',
     emailOnly: true,
     selectors: {
-      email:  'input[name="email"], input[type="email"]',
-      submit: 'button[type="submit"], input[type="submit"]',
+      email:  'input#optout_email',
+      submit: 'input[type="submit"]',
     },
   },
 
@@ -550,19 +537,6 @@ const BROKERS = [
       firstName: 'input[name="firstName"], input[placeholder*="first" i]',
       lastName:  'input[name="lastName"], input[placeholder*="last" i]',
       email:     'input[name="email"], input[type="email"]',
-      submit:    'button[type="submit"], input[type="submit"]',
-    },
-  },
-
-  // ── PublicRecordsNow ──────────────────────────────────────────────────────
-  {
-    id: 'publicrecordsnow', name: 'PublicRecordsNow',
-    url: 'https://www.publicrecordsnow.com/removal.aspx',
-    emailOnly: true,
-    selectors: {
-      firstName: 'input[name="FirstName"], input[name="firstName"], input[placeholder*="first" i]',
-      lastName:  'input[name="LastName"], input[name="lastName"], input[placeholder*="last" i]',
-      email:     'input[name="Email"], input[name="email"], input[type="email"]',
       submit:    'button[type="submit"], input[type="submit"]',
     },
   },
@@ -719,18 +693,12 @@ const BROKERS = [
     instructions: 'Form is pre-filled. Select "The subject of this request" → click Submit → verify via email.',
   },
 
-  // ── PeekYou — was removed due to wrong URL; correct URL restored ──────────
+  // ── PeekYou — opt-out page dead (redirects to homepage); manual email ──────
   {
     id: 'peekyou', name: 'PeekYou',
-    url: 'https://www.peekyou.com/opt_out',
-    emailOnly: false,
-    selectors: {
-      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
-      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
-      state:     'select[name="state"], select[id*="state"]',
-      submit:    'button[type="submit"], input[type="submit"]',
-    },
-    instructions: 'Auto-fills name + state. Click Search → find your listing → click Opt Out → verify email.',
+    url: 'https://www.peekyou.com/',
+    manual: true,
+    instructions: 'PeekYou\'s opt-out form redirects to homepage. Email optout@peekyou.com with subject "Opt-Out Request" including your full name and the URL of your profile on peekyou.com.',
   },
 
   // ── PeopleConnect network (covers TruthFinder, InstantCheckmate, Intelius, 7 more) ─
@@ -952,9 +920,9 @@ const BROKERS = [
   },
   {
     id: 'lusha', name: 'Lusha',
-    url: 'https://www.lusha.com/opt-out/',
+    url: 'https://www.lusha.com/privacy-policy/',
     manual: true,
-    instructions: '1. Go to lusha.com/opt-out. 2. Enter your work email address. 3. Submit the opt-out request. 4. Confirm via email. Lusha will remove your profile from their B2B database.',
+    instructions: 'Lusha removed their opt-out page. Email privacy@lusha.com with subject "Data Deletion Request" including your full name, email, and company. They are GDPR/CCPA compliant and must respond within 30 days.',
   },
   {
     id: 'hunter', name: 'Hunter.io',
