@@ -3,6 +3,7 @@
 // Broker list sourced from:
 //   Big Ass Data Broker Opt-Out List (BADBOOL) by Yael Writes
 //   https://github.com/yaelwrites/Big-Ass-Data-Broker-Opt-Out-List (MIT)
+//   EasyOptOuts reference list (MIT)
 //
 // Fields:
 //   emailOnly: true  → background tab, auto-fills form + submits, auto-closes
@@ -16,7 +17,7 @@
 const BROKERS = [
 
   // ══════════════════════════════════════════════════════════════════════
-  // EMAIL-ONLY (23) — background tab, auto-fills + submits, no user watching
+  // EMAIL-ONLY — background tab, auto-fills + submits, no user watching
   // ══════════════════════════════════════════════════════════════════════
 
   // ── CheckPeople / FreePeopleSearch (same platform) ────────────────────────
@@ -135,7 +136,8 @@ const BROKERS = [
     selectors: { email: 'input[name="inputEmail"], input[type="email"]', submit: 'button.submit-comment' },
   },
 
-  // ── Centeda / Vericora (ng/control/privacy platform) ─────────────────────
+  // ── ng/control/privacy platform ──────────────────────────────────────────
+  // Centeda, Vericora, GoLookUp, ClubSet, Kwold, PubRecord360 all share this Angular platform.
   {
     id: 'centeda', name: 'Centeda',
     url: 'https://centeda.com/ng/control/privacy',
@@ -150,6 +152,50 @@ const BROKERS = [
   {
     id: 'vericora', name: 'Vericora',
     url: 'https://vericora.com/ng/control/privacy',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+  {
+    id: 'golookup', name: 'GoLookUp',
+    url: 'https://golookup.com/ng/control/privacy',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+  {
+    id: 'clubset', name: 'ClubSet',
+    url: 'https://www.clubset.com/ng/control/privacy',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+  {
+    id: 'kwold', name: 'Kwold',
+    url: 'https://www.kwold.com/ng/control/privacy',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+  {
+    id: 'pub360', name: 'PubRecord360',
+    url: 'https://pub360.com/ng/control/privacy',
     emailOnly: true,
     selectors: {
       firstName: 'input[name="firstName"], input[placeholder*="first" i]',
@@ -289,8 +335,373 @@ const BROKERS = [
     },
   },
 
+  // ── ZoomInfo — largest B2B data broker ───────────────────────────────────
+  {
+    id: 'zoominfo', name: 'ZoomInfo',
+    url: 'https://www.zoominfo.com/update/opt-out',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── Veromi ────────────────────────────────────────────────────────────────
+  {
+    id: 'veromi', name: 'Veromi',
+    url: 'https://www.veromi.net/privacy',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── PrivateEye ────────────────────────────────────────────────────────────
+  {
+    id: 'privateeye', name: 'PrivateEye',
+    url: 'https://www.privateeye.com/opt-out',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[name="first_name"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[name="last_name"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── DobSearch ─────────────────────────────────────────────────────────────
+  {
+    id: 'dobsearch', name: 'DobSearch',
+    url: 'https://www.dobsearch.com/people-finder/opt_out.php',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[name="fname"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[name="lname"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"], input[name="submit"]',
+    },
+  },
+
+  // ── USA People Search ─────────────────────────────────────────────────────
+  {
+    id: 'usapeoplesearch', name: 'USA People Search',
+    url: 'https://www.usa-people-search.com/manage/optout/submit',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── AllAreaCodes ──────────────────────────────────────────────────────────
+  {
+    id: 'allareacodes', name: 'AllAreaCodes',
+    url: 'https://www.allareacodes.com/opt_out.htm',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[name="first_name"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[name="last_name"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"], input[name="submit"]',
+    },
+  },
+
+  // ── Homemetry — property/address data ────────────────────────────────────
+  {
+    id: 'homemetry', name: 'Homemetry',
+    url: 'https://homemetry.com/opt-out',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── Pipl — deep web people search ────────────────────────────────────────
+  {
+    id: 'pipl', name: 'Pipl',
+    url: 'https://pipl.com/optout',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── CriminalWatchDog ──────────────────────────────────────────────────────
+  {
+    id: 'criminalwatchdog', name: 'CriminalWatchDog',
+    url: 'https://www.criminalwatchdog.com/removal',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[name="first"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[name="last"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── iBackgroundCheck ──────────────────────────────────────────────────────
+  {
+    id: 'ibackgroundcheck', name: 'iBackgroundCheck',
+    url: 'https://ibackgroundcheck.com/removal',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── PeopleWhiz ────────────────────────────────────────────────────────────
+  {
+    id: 'peoplewhiz', name: 'PeopleWhiz',
+    url: 'https://www.peoplewhiz.com/optout',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── NumberHub ─────────────────────────────────────────────────────────────
+  {
+    id: 'numberhub', name: 'NumberHub',
+    url: 'https://www.numberhub.com/opt-out',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── CourtRecord.net ───────────────────────────────────────────────────────
+  {
+    id: 'courtrecord', name: 'CourtRecord.net',
+    url: 'https://www.courtrecord.net/opt-out',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── Oracle Data Cloud — ad-tech data broker ───────────────────────────────
+  {
+    id: 'oracle_datacloud', name: 'Oracle Data Cloud',
+    url: 'https://datacloudoptout.oracle.com/',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── LiveRamp — ad-tech identity graph ────────────────────────────────────
+  {
+    id: 'liveramp', name: 'LiveRamp',
+    url: 'https://optout.liveramp.com/',
+    emailOnly: true,
+    selectors: {
+      email:  'input[name="email"], input[type="email"]',
+      submit: 'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── InfoFree — B2B mailing list data ─────────────────────────────────────
+  {
+    id: 'infofree', name: 'InfoFree',
+    url: 'https://infofree.com/opt-out/',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── FindPeopleFast ────────────────────────────────────────────────────────
+  {
+    id: 'findpeoplefast', name: 'FindPeopleFast',
+    url: 'https://www.findpeoplefast.net/opt-out',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── PublicRecordsNow ──────────────────────────────────────────────────────
+  {
+    id: 'publicrecordsnow', name: 'PublicRecordsNow',
+    url: 'https://www.publicrecordsnow.com/removal.aspx',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="FirstName"], input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="LastName"], input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="Email"], input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── BirthDatabase ─────────────────────────────────────────────────────────
+  {
+    id: 'birthdatabase', name: 'BirthDatabase',
+    url: 'https://www.birthdatabase.com/opt-out',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── Epsilon — direct mail data broker ────────────────────────────────────
+  {
+    id: 'epsilon', name: 'Epsilon',
+    url: 'https://www.epsilon.com/us/about-us/data-subject-request',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── PhoneDetective ────────────────────────────────────────────────────────
+  {
+    id: 'phonedetective', name: 'PhoneDetective',
+    url: 'https://www.phonedetective.com/PD.aspx?id=optout',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── Addresses.com (standalone form, also covered via PeopleConnect) ───────
+  // Note: Keep as standalone since PeopleConnect is search-first; some users want email-only path.
+
+  // ── PeopleSearchSite ──────────────────────────────────────────────────────
+  {
+    id: 'peoplesearchsite', name: 'PeopleSearchSite',
+    url: 'https://www.peoplesearchsite.com/optout.php',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="fname"], input[placeholder*="first" i]',
+      lastName:  'input[name="lname"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── CourtPublicRecords ────────────────────────────────────────────────────
+  {
+    id: 'courtpublicrecords', name: 'CourtPublicRecords',
+    url: 'https://www.courtpublicrecords.com/opt-out',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── PublicPhoneRecords ────────────────────────────────────────────────────
+  {
+    id: 'publicphonerecords', name: 'PublicPhoneRecords',
+    url: 'https://www.publicphonerecords.com/opt-out',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── PersonLookup ──────────────────────────────────────────────────────────
+  {
+    id: 'personlookup', name: 'PersonLookup',
+    url: 'https://www.person-lookup.com/opt-out',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── Classmates.com ────────────────────────────────────────────────────────
+  {
+    id: 'classmates', name: 'Classmates.com',
+    url: 'https://www.classmates.com/privacy/consumer-request',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── PeopleLookupFree ──────────────────────────────────────────────────────
+  {
+    id: 'peoplelookupfree', name: 'PeopleLookupFree',
+    url: 'https://peoplelookupfree.com/optout',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
+  // ── USATrace ──────────────────────────────────────────────────────────────
+  {
+    id: 'usatrace', name: 'USATrace',
+    url: 'https://www.usatrace.com/opt-out',
+    emailOnly: true,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      email:     'input[name="email"], input[type="email"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+  },
+
   // ══════════════════════════════════════════════════════════════════════
-  // SEARCH-FIRST (10) — foreground tab, user picks their record + closes tab
+  // SEARCH-FIRST — foreground tab, user picks their record + closes tab
   // ══════════════════════════════════════════════════════════════════════
 
   // ── FastPeopleSearch ──────────────────────────────────────────────────────
@@ -306,6 +717,20 @@ const BROKERS = [
       submit:    'button[type="submit"]:not(.search-form-button-submit)',
     },
     instructions: 'Form is pre-filled. Select "The subject of this request" → click Submit → verify via email.',
+  },
+
+  // ── PeekYou — was removed due to wrong URL; correct URL restored ──────────
+  {
+    id: 'peekyou', name: 'PeekYou',
+    url: 'https://www.peekyou.com/opt_out',
+    emailOnly: false,
+    selectors: {
+      firstName: 'input[name="firstName"], input[placeholder*="first" i]',
+      lastName:  'input[name="lastName"], input[placeholder*="last" i]',
+      state:     'select[name="state"], select[id*="state"]',
+      submit:    'button[type="submit"], input[type="submit"]',
+    },
+    instructions: 'Auto-fills name + state. Click Search → find your listing → click Opt Out → verify email.',
   },
 
   // ── PeopleConnect network (covers TruthFinder, InstantCheckmate, Intelius, 7 more) ─
@@ -361,7 +786,7 @@ const BROKERS = [
     instructions: 'Auto-fills name + state. Click Search → find your record → opt out → verify email.',
   },
 
-  // ── InfoPay platform: SearchQuarry / RecordsFinder / InfoTracer ───────────
+  // ── InfoPay platform: SearchQuarry / RecordsFinder / InfoTracer / StateRecords ─
   {
     id: 'searchquarry', name: 'SearchQuarry',
     url: 'https://members.searchquarry.com/opt-out',
@@ -401,8 +826,6 @@ const BROKERS = [
     },
     instructions: 'Form is pre-filled. Click Submit → find your record in results → confirm opt-out.',
   },
-
-  // ── StateRecords.org (InfoPay platform) ──────────────────────────────────
   {
     id: 'staterecords', name: 'StateRecords.org',
     url: 'https://staterecords.org/optout',
@@ -502,6 +925,42 @@ const BROKERS = [
     url: 'https://pimeyes.com/en/opt-out-request-form',
     manual: true,
     instructions: '1. Go to pimeyes.com/en/opt-out-request-form. 2. Enter your name and email. 3. Upload a photo of yourself. 4. Submit the opt-out request.',
+  },
+  {
+    id: 'equifax', name: 'Equifax',
+    url: 'https://www.equifax.com/personal/privacy/',
+    manual: true,
+    instructions: '1. Go to equifax.com/personal/privacy. 2. Click "Opt Out of Marketing". 3. Provide name, address, and last 4 of SSN to verify identity. 4. Submit opt-out request. Note: This opts you out of Equifax marketing products, not your credit file.',
+  },
+  {
+    id: 'experian', name: 'Experian',
+    url: 'https://www.experian.com/privacy/center.html',
+    manual: true,
+    instructions: '1. Go to experian.com/privacy/center.html. 2. Select your state. 3. Submit a CCPA/GDPR deletion request. 4. Provide name, email, and address for verification. 5. Confirm via email.',
+  },
+  {
+    id: 'transunion', name: 'TransUnion',
+    url: 'https://www.transunion.com/consumer-privacy',
+    manual: true,
+    instructions: '1. Go to transunion.com/consumer-privacy. 2. Select "Opt Out of Marketing". 3. Complete the form with your name and address. 4. Submit request. Alternatively, call 1-888-567-8688.',
+  },
+  {
+    id: 'rocketreach', name: 'RocketReach',
+    url: 'https://rocketreach.co/privacy',
+    manual: true,
+    instructions: '1. Go to rocketreach.co. 2. Search for your name/profile. 3. Open your profile. 4. Click the privacy/opt-out link or email privacy@rocketreach.co with subject "Data Deletion Request" including your name, email, and employer.',
+  },
+  {
+    id: 'lusha', name: 'Lusha',
+    url: 'https://www.lusha.com/opt-out/',
+    manual: true,
+    instructions: '1. Go to lusha.com/opt-out. 2. Enter your work email address. 3. Submit the opt-out request. 4. Confirm via email. Lusha will remove your profile from their B2B database.',
+  },
+  {
+    id: 'hunter', name: 'Hunter.io',
+    url: 'https://hunter.io/privacy',
+    manual: true,
+    instructions: '1. Go to hunter.io. 2. Search your domain/name. 3. Find your profile. 4. Click the opt-out link on your profile page, or email privacy@hunter.io requesting deletion of your email and associated data.',
   },
 
 ];
