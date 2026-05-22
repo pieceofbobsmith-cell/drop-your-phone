@@ -132,18 +132,40 @@
     };
 
     // ── Fill a <select> ───────────────────────────────────────────────────────
+    const STATE_NAMES = {
+      AL:'Alabama',AK:'Alaska',AZ:'Arizona',AR:'Arkansas',CA:'California',
+      CO:'Colorado',CT:'Connecticut',DE:'Delaware',FL:'Florida',GA:'Georgia',
+      HI:'Hawaii',ID:'Idaho',IL:'Illinois',IN:'Indiana',IA:'Iowa',
+      KS:'Kansas',KY:'Kentucky',LA:'Louisiana',ME:'Maine',MD:'Maryland',
+      MA:'Massachusetts',MI:'Michigan',MN:'Minnesota',MS:'Mississippi',MO:'Missouri',
+      MT:'Montana',NE:'Nebraska',NV:'Nevada',NH:'New Hampshire',NJ:'New Jersey',
+      NM:'New Mexico',NY:'New York',NC:'North Carolina',ND:'North Dakota',OH:'Ohio',
+      OK:'Oklahoma',OR:'Oregon',PA:'Pennsylvania',RI:'Rhode Island',SC:'South Carolina',
+      SD:'South Dakota',TN:'Tennessee',TX:'Texas',UT:'Utah',VT:'Vermont',
+      VA:'Virginia',WA:'Washington',WV:'West Virginia',WI:'Wisconsin',WY:'Wyoming',
+      DC:'District of Columbia',
+    };
+
     const fillSelect = (el, value) => {
       if (!el || !value) return false;
+      // Try exact value first
       nativeSelectSetter.call(el, value);
       el.dispatchEvent(new Event('change', { bubbles: true }));
-      if (!el.value) {
-        for (const opt of el.options) {
-          if (opt.text.toLowerCase().includes(value.toLowerCase()) ||
-              opt.value.toLowerCase() === value.toLowerCase()) {
-            opt.selected = true;
-            el.dispatchEvent(new Event('change', { bubbles: true }));
-            break;
-          }
+      if (el.value) return true;
+      // Expand 2-letter abbreviation to full name and try again
+      const expanded = STATE_NAMES[value.toUpperCase()] || value;
+      nativeSelectSetter.call(el, expanded);
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      if (el.value) return true;
+      // Text/value scan with both abbreviation and full name
+      const targets = [value.toLowerCase(), expanded.toLowerCase()];
+      for (const opt of el.options) {
+        if (targets.includes(opt.text.toLowerCase()) ||
+            targets.includes(opt.value.toLowerCase()) ||
+            opt.text.toLowerCase().includes(expanded.toLowerCase())) {
+          opt.selected = true;
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+          break;
         }
       }
       return !!el.value;
